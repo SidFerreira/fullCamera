@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:rim="http://www.blackberry.com/ns/widgets"
+        id="br.com.ferreiraz.fullCamera"
+        version="0.0.1">
+    <name>Camera</name>
+    <description>Cordova Camera Plugin</description>
+    <license>Apache 2.0</license>
+    <keywords>cordova,camera</keywords>
+    <repo>https://git-wip-us.apache.org/repos/asf/cordova-plugin-camera.git</repo>
+    <issue>https://issues.apache.org/jira/browse/CB/component/12320645</issue>
+
+    <js-module src="www/fullCamera.js" name="fullCamera">
+        <clobbers target="navigator.fullCamera" />
+    </js-module>
+
+    <!-- android - -
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="Camera">
+                <param name="android-package" value="org.apache.cordova.camera.CameraLauncher"/>
+            </feature>
+        </config-file>
+        <config-file target="AndroidManifest.xml" parent="/*">
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+        </config-file>
+
+        <source-file src="src/android/CameraLauncher.java" target-dir="src/org/apache/cordova/camera" />
+        <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/camera" />
+        <source-file src="src/android/ExifHelper.java" target-dir="src/org/apache/cordova/camera" />
+
+        <js-module src="www/CameraPopoverHandle.js" name="CameraPopoverHandle">
+            <clobbers target="CameraPopoverHandle" />
+        </js-module>
+
+     </platform-->
+    <platform name="android">
+        <config-file target="res/xml/config.xml" parent="/*">
+            <feature name="FullCamera">
+                <param name="android-package" value="br.com.ferreiraz.fullCameraLauncher.FullCameraLauncher"/>
+            </feature>
+        </config-file>
+
+        <source-file src="launchers/FullCameraLauncher.java" target-dir="src/br/com/ferreiraz/fullCameraLauncher" />
+
+        <config-file target="AndroidManifest.xml" parent="/manifest">
+            <uses-permission android:name="android.permission.CAMERA" />
+            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+            <uses-permission android:name="android.permission.RECORD_AUDIO" />
+            <uses-feature android:name="android.hardware.camera" />
+            <uses-feature android:name="android.hardware.camera.autofocus" />
+        </config-file>
+
+        <config-file target="AndroidManifest.xml" parent="/manifest/application">
+        <activity
+            android:theme="@android:style/Theme.Light.NoTitleBar"
+            android:name="br.com.ferreiraz.fullcamera.FullCameraActivity"
+            android:label="@string/full_camera" >
+        </activity>
+        </config-file>
+
+        <framework src="src/android/fullcamera" custom="true" />
+
+    </platform>
+
+</plugin>

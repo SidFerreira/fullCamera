@@ -1,0 +1,137 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@android:color/black"
+                tools:context=".FullCameraActivity" android:id="@+id/baseLayout">
+
+    <FrameLayout
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent" android:id="@+id/cameraPreview">
+    </FrameLayout>
+    <RelativeLayout
+            android:orientation="vertical"
+            android:layout_width="fill_parent"
+            android:layout_height="fill_parent" android:id="@+id/interfaceLayout">
+        <RelativeLayout
+                android:layout_width="fill_parent"
+                android:layout_height="56dp" android:id="@+id/layoutTop" android:layout_alignParentEnd="true"
+                android:layout_alignParentStart="true" android:layout_alignParentTop="true"
+                android:layout_alignParentLeft="true" android:layout_alignParentRight="true"
+                android:background="#55ffffff"
+                android:paddingLeft="8dp" android:paddingRight="8dp">
+            <ImageButton
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:id="@+id/back"
+                    android:layout_alignParentLeft="true" android:layout_alignParentStart="true"
+                    android:contentDescription="@string/description_back"
+                    android:background="@drawable/fullcambackstyle"
+                    android:layout_centerVertical="true"/>
+            <ImageButton android:layout_width="30dp" android:layout_height="30dp"
+                         android:id="@+id/next"
+                         android:layout_alignParentEnd="true"
+                         android:layout_alignParentRight="true" android:contentDescription="@string/description_next"
+                         android:background="@drawable/fullcamnextstyle" android:layout_centerVertical="true"/>
+            <ImageButton
+                    android:layout_width="30dp"
+                    android:layout_height="30dp"
+                    android:id="@+id/cancel"
+                    android:background="@drawable/fullcamcancelstyle" android:layout_centerInParent="true"
+                    android:contentDescription="@string/description_cancel" android:visibility="gone"/>
+
+            <us.feras.ecogallery.EcoGallery
+                    android:id="@+id/pagerPhotos"
+                    android:layout_centerInParent="true"
+                    android:layout_width="fill_parent"
+                    android:layout_height="46dp"
+                    android:layout_marginLeft="40dp"
+                    android:layout_marginRight="40dp"/>
+        </RelativeLayout>
+        <RelativeLayout
+                android:layout_width="fill_parent"
+                android:layout_height="100dp" android:layout_alignParentLeft="true"
+                android:layout_alignParentBottom="true" android:layout_alignParentRight="true"
+                android:id="@+id/layoutBottom" android:longClickable="false" android:layout_alignParentEnd="true"
+                android:layout_alignParentStart="true" android:background="#55ffffff"
+                android:paddingLeft="8dp" android:paddingTop="12dp" android:paddingRight="8dp"
+                android:paddingBottom="12dp">
+
+            <us.feras.ecogallery.EcoGallery
+                    android:id="@+id/pagerSources"
+                    android:layout_alignParentBottom="true"
+                    android:layout_width="fill_parent"
+                    android:layout_height="50dp"
+                    />
+            <ProgressBar
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="fill_parent"
+                    android:layout_height="3dp"
+                    android:id="@+id/progressBar" android:layout_alignParentTop="true"
+                    android:layout_centerHorizontal="true" android:layout_marginLeft="50dp"
+                    android:layout_marginRight="50dp" android:max="100" android:progress="30"/>
+
+        </RelativeLayout>
+        <RelativeLayout
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent" android:layout_alignParentEnd="true"
+                android:layout_alignParentStart="true" android:layout_alignParentLeft="true"
+                android:layout_alignParentRight="true" android:layout_below="@+id/layoutTop"
+                android:layout_above="@+id/layoutBottom" android:id="@+id/layoutMiddle">
+            <ImageButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/switchCamera"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentRight="true"
+                    android:layout_alignParentEnd="false"
+                    android:layout_marginRight="10dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_marginTop="10dp"
+                    android:contentDescription="@string/description_switch_camera"
+                    android:background="@drawable/fullcamswitchcamerastyle"
+                    android:visibility="gone"
+                    android:clickable="true"/>
+
+            <ImageButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/flashOn"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentLeft="true"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="10dp"
+                    android:contentDescription="@string/description_switch_flash"
+                    android:background="@drawable/fullcamflashonstyle"
+                    android:visibility="gone"
+                    android:clickable="true"/>
+            <ImageButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/flashOff"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentLeft="true"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="10dp"
+                    android:contentDescription="@string/description_switch_flash"
+                    android:background="@drawable/fullcamflashoffstyle"
+                    android:visibility="gone"
+                    android:clickable="true"/>
+            <ImageButton
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/flashAuto"
+                    android:layout_alignParentTop="true"
+                    android:layout_alignParentLeft="true"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginStart="10dp"
+                    android:layout_marginTop="10dp"
+                    android:contentDescription="@string/description_switch_flash"
+                    android:background="@drawable/fullcamflashautostyle"
+                    android:visibility="gone"
+                    android:clickable="true"/>
+        </RelativeLayout>
+    </RelativeLayout>
+</RelativeLayout>
