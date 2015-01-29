@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:rim="http://www.blackberry.com/ns/widgets"
+        id="br.com.ferreiraz.fullCamera"
+        version="0.0.1">
+    <name>Full Camera Plugin</name>
+    <description>Plugin that unites gallery picking, taking photos and capture videos</description>
+    <license>Apache 2.0</license>
+    <keywords>cordova,camera, gallery</keywords>
+    <repo>https://github.com/SidFerreira/fullCamera.git</repo>
+    <issue>https://github.com/SidFerreira/fullCamera/issues</issue>
+
+    <js-module src="www/fullCamera.js" name="fullCamera">
+        <clobbers target="navigator.fullCamera" />
+    </js-module>

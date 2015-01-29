@@ -4,37 +4,18 @@
         xmlns:rim="http://www.blackberry.com/ns/widgets"
         id="br.com.ferreiraz.fullCamera"
         version="0.0.1">
-    <name>Camera</name>
-    <description>Cordova Camera Plugin</description>
+    <name>Full Camera Plugin</name>
+    <description>Plugin that unites gallery picking, taking photos and capture videos</description>
     <license>Apache 2.0</license>
-    <keywords>cordova,camera</keywords>
-    <repo>https://git-wip-us.apache.org/repos/asf/cordova-plugin-camera.git</repo>
-    <issue>https://issues.apache.org/jira/browse/CB/component/12320645</issue>
+    <keywords>cordova,camera, gallery</keywords>
+    <repo>https://github.com/SidFerreira/fullCamera.git</repo>
+    <issue>https://github.com/SidFerreira/fullCamera/issues</issue>
 
     <js-module src="www/fullCamera.js" name="fullCamera">
         <clobbers target="navigator.fullCamera" />
     </js-module>
 
-    <!-- android - -
-    <platform name="android">
-        <config-file target="res/xml/config.xml" parent="/*">
-            <feature name="Camera">
-                <param name="android-package" value="org.apache.cordova.camera.CameraLauncher"/>
-            </feature>
-        </config-file>
-        <config-file target="AndroidManifest.xml" parent="/*">
-            <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
-        </config-file>
-
-        <source-file src="src/android/CameraLauncher.java" target-dir="src/org/apache/cordova/camera" />
-        <source-file src="src/android/FileHelper.java" target-dir="src/org/apache/cordova/camera" />
-        <source-file src="src/android/ExifHelper.java" target-dir="src/org/apache/cordova/camera" />
-
-        <js-module src="www/CameraPopoverHandle.js" name="CameraPopoverHandle">
-            <clobbers target="CameraPopoverHandle" />
-        </js-module>
-
-     </platform-->
+    <!-- android -->
     <platform name="android">
         <config-file target="res/xml/config.xml" parent="/*">
             <feature name="FullCamera">

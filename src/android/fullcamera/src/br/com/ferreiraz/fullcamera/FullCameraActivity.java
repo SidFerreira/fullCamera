@@ -478,17 +478,17 @@ public class FullCameraActivity extends Activity {
         int source_id = pagerSources.getSelectedView().getId();
 
         if(source_id == R.id.source_gallery) {
-            this.getIntent().putExtra("source_id", "gallery");
+            this.getIntent().putExtra("source", "gallery");
             for(ResultClass result : pagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
         } else if(pagerSources.getSelectedView().getId() == R.id.source_photo) {
-            this.getIntent().putExtra("source_id", "photo");
+            this.getIntent().putExtra("source", "photo");
             for(ResultClass result : pagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
         } else if(pagerSources.getSelectedView().getId() == R.id.source_video) {
-            this.getIntent().putExtra("source_id", "video");
+            this.getIntent().putExtra("source", "video");
             if(videosItems.size() > 1) {
                 processVideo();
                 return;
