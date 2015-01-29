@@ -39,3 +39,7 @@ Add `fullCamera` inside `ngCordova.plugins`:
       'ngCordova.plugins.camera',
       'fullCamera'
     ]);
+
+## Known Issues:
+
+- Using `cordova run android` or `ionic run android` fails for unknown reasons. Use eclipse to open the Android project and run. (It is a BIG issue, but there's a temporary solution).
