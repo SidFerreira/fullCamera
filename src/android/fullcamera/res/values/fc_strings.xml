@@ -13,12 +13,15 @@
     <string name="description_next">Next Step</string>
     <string name="description_cancel">Cancel</string>
 
-    <!-- Gallery thumbnail background -->
-    <color name="headerbar_color"> #81D4FA</color>
-    <color name="tabs_color"> #81D4FA </color>
-    <color name="tabs_title_color"> #FFFFFF </color>
-    <color name="headerbar_title_color"> #FFFFFF </color>
-    <color name="headerbar_selected_tab_color"> #34b4e3 </color>
+    <color name="red">#FF0000</color>
+
+    <!-- Gallery thumbnail background -
+    <color name="headerbar_color">#81D4FA</color>
+    <color name="tabs_color">#ff00ff</color>
+    <color name="tabs_title_color">#FFFFFF</color>
+    <color name="headerbar_title_color">#FFFFFF</color>
+    <color name="headerbar_selected_tab_color">#34b4e3</color>
+    <color name="green">#00ff00</color>
 
     <string name="image"> Image </string>
     <string name="video"> Video </string>
@@ -38,13 +41,13 @@
     <string name="no_media_file_available"> No media file available.</string>
 
     <style name="MCBaseTheme" parent="android:Theme.Light">
-        <!--
+        <!- -
             Theme customizations available in newer API levels can go in
             res/values-vXX/styles.xml, while customizations related to
             backward-compatibility can go here.
-        -->
+        - -
     </style>
-    <!-- Eco Gallery
+    <!- - Eco Gallery
 
     <declare-styleable name="EcoGallery">
         <attr name="gravity" format="integer" />

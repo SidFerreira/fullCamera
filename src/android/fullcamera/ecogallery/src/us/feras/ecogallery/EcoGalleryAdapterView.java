@@ -6,7 +6,6 @@ import android.os.Parcelable;
 import android.os.SystemClock;
 import android.util.AttributeSet;
 import android.util.SparseArray;
-import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.SoundEffectConstants;
 import android.view.View;

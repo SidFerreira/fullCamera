@@ -10,12 +10,14 @@ import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.hardware.Camera;
 import android.media.CamcorderProfile;
 import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.*;
+import android.support.v4.app.FragmentTabHost;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
@@ -31,11 +33,15 @@ import com.googlecode.mp4parser.authoring.Track;
 import com.googlecode.mp4parser.authoring.builder.DefaultMp4Builder;
 import com.googlecode.mp4parser.authoring.container.mp4.MovieCreator;
 import com.googlecode.mp4parser.authoring.tracks.AppendTrack;
+import com.learnncode.mediachooser.activity.HomeFragmentActivity;
+import com.learnncode.mediachooser.fragment.ImageFragment;
+import com.learnncode.mediachooser.fragment.VideoFragment;
+
 import us.feras.ecogallery.EcoGallery;
 import us.feras.ecogallery.EcoGalleryAdapterView;
 
 @SuppressWarnings("deprecation")
-public class FullCameraActivity extends Activity {
+public class FullCameraActivity extends HomeFragmentActivity {
 
     public static final String BUTTON_SOURCE_GALLERY = "BUTTON_SOURCE_GALLERY";
     public static final String BUTTON_SOURCE_PHOTO = "BUTTON_SOURCE_PHOTO";
@@ -60,8 +66,12 @@ public class FullCameraActivity extends Activity {
     private EcoGallery                  pagerPhotos;
     private PhotosAdapter               pagerPhotosAdapter;
     private ArrayList<ResultClass>      pagerPhotosItems;
+
     private File                        tempVideoFile;
     private ArrayList<ResultFile>       videosItems = new ArrayList<ResultFile>();
+
+    private File                        galleryVideo;
+
     private ProgressBarAnimation        progressAnimation;
     private ProgressBar                 progressBar;
     private ProgressDialog              progressDialog;
@@ -85,7 +95,7 @@ public class FullCameraActivity extends Activity {
     private int                         imageBox                = 720;
     private int                         imageCompression        = 100;
 
-    private int                         maxVideoDuration        = 30;
+    private static int                  maxVideoDuration        = 30; //in seconds
     private int                         maxPhotoCount           = 5;
     private int                         totalVideoDuration      = 0;
 
@@ -108,35 +118,28 @@ public class FullCameraActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
         if(savedInstanceState == null)
             savedInstanceState = new Bundle();
-
-        stringOk                = getString(savedInstanceState, "stringOk" , stringOk);
-        stringCancel            = getString(savedInstanceState, "stringCancel" , stringCancel);
-        stringMaxPhotos         = getString(savedInstanceState, "stringMaxPhotos" , stringMaxPhotos);
-        stringDeletePhoto       = getString(savedInstanceState, "stringDeletePhoto" , stringDeletePhoto);
-        stringDeleteAllPhotos   = getString(savedInstanceState, "stringDeleteAllPhotos" , stringDeleteAllPhotos);
-        stringDeleteVideo       = getString(savedInstanceState, "stringDeleteVideo" , stringDeleteVideo);
-        stringDeleteAllVideos   = getString(savedInstanceState, "stringDeleteAllVideos" , stringDeleteAllVideos );
-        stringProcessingVideos  = getString(savedInstanceState, "stringProcessingVideos" , stringProcessingVideos);
-        stringAppFolder         = getString(savedInstanceState, "stringAppFolder" , stringAppFolder);
-
-        maxVideoDuration        = savedInstanceState.getInt("maxVideoDuration", maxVideoDuration);
-        maxPhotoCount           = savedInstanceState.getInt("maxPhotoCount", maxPhotoCount);
-        imageBox                = savedInstanceState.getInt("imageBox", 1200);
-        imageCompression        = savedInstanceState.getInt("imageCompression", 100);
-
-        shouldSaveOnGallery     = savedInstanceState.getBoolean("shouldSaveOnGallery", shouldSaveOnGallery);
-
-
+        super.onCreate(savedInstanceState);
 
         //TODO Fix rotation issues
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_NOSENSOR);
         self = this;
 
-        setContentView(R.layout.activity_full_cam);
+        setupOptionsFC(savedInstanceState);
 
+        setupReferencesFC();
+
+        initPagerSources();
+
+        initPagerPhotos();
+
+//        startCamera();
+
+
+    }
+
+    private void setupReferencesFC() {
         buttonSwitchCamera  = (ImageButton) findViewById(R.id.switchCamera);
         buttonBack          = (ImageButton) findViewById(R.id.back);
         buttonNext          = (ImageButton) findViewById(R.id.next);
@@ -155,23 +158,25 @@ public class FullCameraActivity extends Activity {
 
             initOnClickListener();
         }
+    }
 
+    private void setupOptionsFC(Bundle savedInstanceState) {
+        stringOk                = getString(savedInstanceState, "stringOk" , stringOk);
+        stringCancel            = getString(savedInstanceState, "stringCancel" , stringCancel);
+        stringMaxPhotos         = getString(savedInstanceState, "stringMaxPhotos" , stringMaxPhotos);
+        stringDeletePhoto       = getString(savedInstanceState, "stringDeletePhoto" , stringDeletePhoto);
+        stringDeleteAllPhotos   = getString(savedInstanceState, "stringDeleteAllPhotos" , stringDeleteAllPhotos);
+        stringDeleteVideo       = getString(savedInstanceState, "stringDeleteVideo" , stringDeleteVideo);
+        stringDeleteAllVideos   = getString(savedInstanceState, "stringDeleteAllVideos" , stringDeleteAllVideos );
+        stringProcessingVideos  = getString(savedInstanceState, "stringProcessingVideos" , stringProcessingVideos);
+        stringAppFolder         = getString(savedInstanceState, "stringAppFolder" , stringAppFolder);
 
-        pagerSources = (EcoGallery) findViewById(R.id.pagerSources);
-        initPagerSources();
+        maxVideoDuration        = savedInstanceState.getInt("maxVideoDuration", maxVideoDuration);
+        maxPhotoCount           = savedInstanceState.getInt("maxPhotoCount", maxPhotoCount);
+        imageBox                = savedInstanceState.getInt("imageBox", 1200);
+        imageCompression        = savedInstanceState.getInt("imageCompression", 100);
 
-        pagerPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
-        initPagerPhotos();
-
-        int numberOfCameras = Camera.getNumberOfCameras();
-        if(numberOfCameras > 0) {
-            if(numberOfCameras > 1) {
-                buttonSwitchCamera.setVisibility(View.VISIBLE);
-            }
-            startCamera();
-        }
-
-        maxVideoDuration = 30;
+        shouldSaveOnGallery     = savedInstanceState.getBoolean("shouldSaveOnGallery", shouldSaveOnGallery);
     }
 
     private void initOnClickListener() {
@@ -198,6 +203,7 @@ public class FullCameraActivity extends Activity {
     }
 
     private void initPagerPhotos() {
+        pagerPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
         if(pagerPhotosItems == null) {
             pagerPhotosItems = new ArrayList<ResultClass>();
             pagerPhotosAdapter = new PhotosAdapter(this, pagerPhotosItems);
@@ -237,6 +243,7 @@ public class FullCameraActivity extends Activity {
     }
 
     private void initPagerSources() {
+        pagerSources = (EcoGallery) findViewById(R.id.pagerSources);
         if(pagerSourcesAdapter == null) {
             ArrayList<ImageButton> items = new ArrayList<ImageButton>();
             setBackgroundOn(buttonSourceGallery, R.drawable.fullcamgallerystyle);
@@ -292,7 +299,7 @@ public class FullCameraActivity extends Activity {
                         dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int buttonId) {
                                 dialog.dismiss();
-                                dropVideos();
+                                dropVideos(true);
                             }
                         });
                         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
@@ -551,7 +558,7 @@ public class FullCameraActivity extends Activity {
                         mediaScanIntent.setData(contentUri);
                         self.sendBroadcast(mediaScanIntent);
                     }
-                    dropVideos();
+                    dropVideos(true);
                     videosItems.add(new ResultFile(ret));
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -583,21 +590,24 @@ public class FullCameraActivity extends Activity {
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                dropVideos();
+                if(pagerSources.getSelectedItemId() == R.id.source_video) {
+                    dropVideos(true);
+                } else {
+                    dropVideos(false);
+                }
             }
         });
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                pagerSources.setSelection(pagerPhotos.getOldPosition());
             }
         });
         dialog.setIcon(android.R.drawable.ic_dialog_alert);
         dialog.show();
     }
 
-    public void dropVideos() {
-        if(!shouldSaveOnGallery) {
+    public void dropVideos(boolean shouldDelete) {
+        if(!shouldSaveOnGallery && shouldDelete) {
             for(ResultFile resultFile : videosItems) {
                 if(!resultFile.getFile().delete())
                     resultFile.getFile().deleteOnExit();
@@ -615,17 +625,23 @@ public class FullCameraActivity extends Activity {
 
 
     public void startCamera() {
-        if(mCamera == null)
-            mCamera = getCameraInstance();
+        int numberOfCameras = Camera.getNumberOfCameras();
+        if(numberOfCameras > 0) {
+            if(numberOfCameras > 1) {
+                buttonSwitchCamera.setVisibility(View.VISIBLE);
+            }
+            if(mCamera == null)
+                mCamera = getCameraInstance();
 
-        mPreview = new CameraPreview(this, mCamera);
-        FrameLayout preview = (FrameLayout) findViewById(R.id.cameraPreview);
-        if(preview.getChildCount() > 0) {
-            preview.removeViewAt(0);
+            mPreview = new CameraPreview(this, mCamera);
+            FrameLayout preview = (FrameLayout) findViewById(R.id.cameraPreview);
+            if(preview.getChildCount() > 0) {
+                preview.removeViewAt(0);
+            }
+            preview.addView(mPreview);
+            currentFlashMode = 1; //AUTO
+            flashSet();
         }
-        preview.addView(mPreview);
-        currentFlashMode = 1; //AUTO
-        flashSet();
     }
 
     @Override
@@ -859,23 +875,7 @@ public class FullCameraActivity extends Activity {
             releaseMediaRecorder(); // release the MediaRecorder object
             mCamera.lock();         // take camera access back from MediaRecorder
 
-            try {
-                MediaPlayer mp = new MediaPlayer();
-                FileInputStream stream;
-                stream = new FileInputStream(tempVideoFile);
-                mp.setDataSource(stream.getFD());
-                stream.close();
-                mp.prepare();
-                long duration = mp.getDuration();
-                mp.release();
-                totalVideoDuration += (duration / 1000);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
             progressBar.clearAnimation();
-
-            videosItems.add(new ResultFile(tempVideoFile));
-
             if(shouldSaveOnGallery) {
                 Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
                 Uri contentUri = Uri.fromFile(tempVideoFile);
@@ -883,12 +883,10 @@ public class FullCameraActivity extends Activity {
                 self.sendBroadcast(mediaScanIntent);
             }
 
+            addVideo(tempVideoFile);
+
             // inform the user that recording has stopped
             isRecording = false;
-            tempVideoFile = null;
-            pagerPhotos.setVisibility(View.GONE);
-            if(videosItems.size() > 0)
-                buttonCancel.setVisibility(View.VISIBLE);
         } else {
             // initialize video camera
             if (prepareVideoRecorder()) {
@@ -910,6 +908,28 @@ public class FullCameraActivity extends Activity {
             } else {
                 releaseMediaRecorder();
             }
+        }
+    }
+
+    protected void addVideo(File file) {
+        try {
+            MediaPlayer mp = new MediaPlayer();
+            FileInputStream stream;
+            stream = new FileInputStream(file);
+            mp.setDataSource(stream.getFD());
+            stream.close();
+            mp.prepare();
+            long duration = mp.getDuration();
+            mp.release();
+            totalVideoDuration += (duration / 1000);
+
+            videosItems.add(new ResultFile(file));
+            tempVideoFile = null;
+            pagerPhotos.setVisibility(View.GONE);
+            if(videosItems.size() > 0)
+                buttonCancel.setVisibility(View.VISIBLE);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -942,93 +962,6 @@ public class FullCameraActivity extends Activity {
             v.setBackground( getResources().getDrawable(d));
         }
     }
-
-//    SurfaceHolder.Callback createSurfaceHolderCallback() {
-//        SurfaceHolder.Callback callback = new SurfaceHolder.Callback() {
-//            @Override
-//            public void surfaceCreated(SurfaceHolder holder) {
-////                Log.d("Camera", "surfaceCreated: " + currentCameraId);
-//                Camera currentCamera = camera;
-//                if(currentCamera != null) {
-////                    Log.d("Camera", "Remove Previous");
-//                    currentCamera.stopPreview();
-//                    currentCamera.release();
-//                }
-//
-//                camera = Camera.open(currentCameraId);
-//
-//                try {
-//                    camera.setPreviewDisplay(holder);
-//
-//                    flashSwitch();
-//                } catch (IOException exception) {
-//                    camera.release();
-//                    camera = null;
-//                }
-//            }
-//
-//            @Override
-//            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-////                Log.d("Camera", "surfaceChanged: " + currentCameraId);
-//                configure(format, width, height);
-//                camera.startPreview();
-//            }
-//
-//            @Override
-//            public void surfaceDestroyed(SurfaceHolder holder) {
-////                Log.d("Camera", "surfaceDestroyed: " + currentCameraId);
-//                camera.stopPreview();
-//                camera.release();
-//                camera = null;
-//            }
-//
-//            private void configure(int format, int screenWidth, int screenHeight) {
-//                Camera.Parameters parameters = camera.getParameters();
-//                boolean isPortrait = false;
-//                final int rotation = ((WindowManager) self.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
-//                switch (rotation) {
-//                    case Surface.ROTATION_90:
-//                        camera.setDisplayOrientation(0);
-//                        break;
-//                    case Surface.ROTATION_270:
-//                        isPortrait = true;
-//                        camera.setDisplayOrientation(180);
-//                        break;
-//                    default:
-//                        isPortrait = true;
-//                        camera.setDisplayOrientation(90);
-//                        int t = screenWidth;
-//                        screenWidth = screenHeight;
-//                        screenHeight = t;
-//                        break;
-//                }
-//
-//                if (parameters.getSupportedPictureSizes() != null) {
-//                    List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
-//                    Camera.Size largest = sizes.get(0);
-//                    for (Camera.Size size : sizes) {
-//                        if(size.width > screenWidth && size.height > screenHeight) {
-//                            if (size.width >= largest.width && size.height >= largest.height) {
-//                                largest = size;
-//                            }
-//                        }
-//                    }
-//                    float relationHeight = (float) largest.height / screenHeight;
-//                    float relationWidth  = (float) largest.width  / screenWidth;
-//                    float relation       = (relationHeight > relationWidth) ? relationHeight : relationWidth;
-//                    int previewHeight = (int) Math.floor(largest.height / relation);
-//                    int previewWidth  = (int) Math.floor(largest.width  / relation);
-//
-//                    if(isPortrait)
-//                        parameters.setPreviewSize(previewHeight, previewWidth);
-//                    else
-//                        parameters.setPreviewSize(previewWidth, previewHeight);
-//                }
-//            }
-//        };
-//
-//        return callback;
-//    }
 
     private class PhotosAdapter extends BaseAdapter {
         private Context context;
@@ -1097,5 +1030,91 @@ public class FullCameraActivity extends Activity {
         public View getView(int position, View convertView, ViewGroup parent) {
             return items.get(position);
         }
+    }
+
+    public static int getMaxVideoDuration() {
+        return maxVideoDuration;
+    }
+
+    //region Media Chooser
+
+
+    @Override
+    protected void setupHeaderUI() { }
+
+    @Override
+    protected void setHeaderTitle(int id_text, int id_image) { }
+
+    @Override
+    protected void setupContentView() {
+        setContentView(R.layout.activity_full_cam);
+    }
+
+    @Override
+    protected Class<? extends ImageFragment> getImageFragmentClass() {
+        return ImageFragmentFC.class;
+    }
+
+    @Override
+    protected Class<? extends VideoFragment> getVideoFragmentClass() {
+        return VideoFragmentFC.class;
+    }
+
+    @Override
+    protected void setupTabTitle(int i) {
+        TabWidget tabWidget = mTabHost.getTabWidget();
+        TextView textView = (TextView) tabWidget.getChildAt(i).findViewById(android.R.id.title);
+        if(textView.getLayoutParams() instanceof RelativeLayout.LayoutParams){
+
+            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) textView.getLayoutParams();
+            params.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            params.addRule(RelativeLayout.CENTER_VERTICAL);
+            params.height = RelativeLayout.LayoutParams.MATCH_PARENT;
+            params.width  = RelativeLayout.LayoutParams.MATCH_PARENT;
+            params.alignWithParent = true;
+            params.setMargins(0,0,0,0);
+            textView.setGravity(Gravity.CENTER);
+            textView.setPadding(0,0,0,0);
+            textView.setLayoutParams(params);
+            textView.setBackgroundColor(Color.BLACK);
+
+        }else if(textView.getLayoutParams() instanceof LinearLayout.LayoutParams){
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) textView.getLayoutParams();
+            params.gravity = Gravity.CENTER;
+            textView.setLayoutParams(params);
+        }
+//        textView.setTextColor(getResources().getColor(com.learnncode.mediachooser.R.color.tabs_title_color));
+        textView.setTextSize(convertDipToPixels(10));
+    }
+
+    @Override
+    protected void changeTabTitleUnselected(int tabNumber) {
+        //((TextView)(mTabHost.getTabWidget().getChildAt(tabNumber).findViewById(android.R.id.title))).setTextColor(Color.WHITE);
+    }
+
+    @Override
+    protected void changeTabTitleSelected(int tabNumber) {
+        //((TextView)(mTabHost.getTabWidget().getChildAt(tabNumber).findViewById(android.R.id.title))).setTextColor(getResources().getColor(com.learnncode.mediachooser.R.color.headerbar_selected_tab_color));
+    }
+
+
+    @Override
+    public void onVideoSelected(ArrayList<String> items){
+        if(items.size() > 0){
+            galleryVideo = new File(items.get(0));
+            showNext();
+        }else{
+            galleryVideo = null;
+            hideNext();
+        }
+    }
+    //endregion
+
+    void showNext() {
+        buttonNext.setVisibility(View.VISIBLE);
+    }
+
+    void hideNext() {
+        buttonNext.setVisibility(View.GONE);
     }
 }

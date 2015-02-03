@@ -14,8 +14,6 @@
     <js-module src="www/fullCamera.js" name="fullCamera">
         <clobbers target="navigator.fullCamera" />
     </js-module>
-
-    <!-- android -->
     <platform name="android">
         <config-file target="res/xml/config.xml" parent="/*">
             <feature name="FullCamera">

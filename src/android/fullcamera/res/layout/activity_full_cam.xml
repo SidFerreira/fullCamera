@@ -66,9 +66,10 @@
             <ProgressBar
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="fill_parent"
-                    android:layout_height="3dp"
+                    android:layout_height="3dp" android:progressDrawable="@color/red"
                     android:id="@+id/progressBar" android:layout_alignParentTop="true"
                     android:layout_centerHorizontal="true" android:layout_marginLeft="50dp"
+                    android:visibility="gone"
                     android:layout_marginRight="50dp" android:max="100" android:progress="30"/>
 
         </RelativeLayout>
@@ -132,6 +133,39 @@
                     android:background="@drawable/fullcamflashautostyle"
                     android:visibility="gone"
                     android:clickable="true"/>
+
+
+            <android.support.v4.app.FragmentTabHost
+                android:id="@android:id/tabhost"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent" >
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical" >
+
+                    <TabWidget
+                        android:id="@android:id/tabs"
+                        android:layout_width="match_parent"
+                        android:background="@android:color/black"
+                        android:layout_height="40dp"
+                        android:padding="0dp"
+                        android:layout_margin="0dp"
+                        android:tabStripEnabled="false"
+                        android:orientation="horizontal" />
+
+                    <FrameLayout
+                        android:id="@android:id/tabcontent"
+                        android:layout_width="0dp"
+                        android:layout_height="0dp" />
+
+                    <FrameLayout
+                        android:id="@+id/realTabcontent"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent" />
+                </LinearLayout>
+            </android.support.v4.app.FragmentTabHost>
         </RelativeLayout>
     </RelativeLayout>
 </RelativeLayout>

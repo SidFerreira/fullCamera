@@ -6,14 +6,14 @@
     <include
         android:id="@+id/meadiaChooserHeaderBar"
         android:layout_width="fill_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="48dp"
         layout="@layout/view_header_bar_media_chooser" >
     </include>
 
-    <android.support.v4.app.FragmentTabHost
+    <FragmentTabHost
         android:id="@android:id/tabhost"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
         android:layout_below="@id/meadiaChooserHeaderBar"
         android:background="@color/tabs_color" >
 
@@ -38,6 +38,6 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" />
         </LinearLayout>
-    </android.support.v4.app.FragmentTabHost>
+    </FragmentTabHost>
 
 </RelativeLayout>
