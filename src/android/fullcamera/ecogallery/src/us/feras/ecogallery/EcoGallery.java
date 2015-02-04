@@ -573,7 +573,9 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
 		int newPos = mFirstPosition + newSelectedChildIndex;
 
-		if (newPos != mSelectedPosition) {
+        //Will not notify changes unless the scrolling has finished
+		if ((newPos != mSelectedPosition && mFlingRunnable.mScroller.isFinished() && !mShouldCallbackDuringFling) ||
+                (newPos != mSelectedPosition && mShouldCallbackDuringFling)) {
 			setSelectedPositionInt(newPos);
 			setNextSelectedPositionInt(newPos);
 			checkSelectionChanged();

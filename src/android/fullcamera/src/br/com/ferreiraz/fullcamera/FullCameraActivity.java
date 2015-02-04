@@ -54,7 +54,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private SurfaceView mPreview;
     private MediaRecorder mMediaRecorder;
     private boolean isRecording = false;
-    private boolean isRollingBack = false;
+    private boolean mPagerSourcesRollingBack = false;
     static private int cameraId = 0;
 
     private SurfaceHolder               surfaceHolder;
@@ -64,11 +64,11 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private int                         currentFlashMode = -1;
     private EcoGallery mPagerSources;
     private SourcesAdapter              pagerSourcesAdapter;
-    private EcoGallery                  pagerPhotos;
+    private EcoGallery mPagerPhotos;
     private PhotosAdapter               pagerPhotosAdapter;
 
-    private ArrayList<ResultClass>      pagerPhotosItems;
-    private ArrayList<ResultFile>       videosItems = new ArrayList<>();
+    private ArrayList<ResultClass> mPagerPhotosItems;
+    private ArrayList<ResultFile> mVideosItems = new ArrayList<>();
     private File                        tempVideoFile;
 
     private VideoFragmentFC             videoFragment;
@@ -202,29 +202,29 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     private void initPagerPhotos() {
-        pagerPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
-        if(pagerPhotosItems == null) {
-            pagerPhotosItems = new ArrayList<>();
-            pagerPhotosAdapter = new PhotosAdapter(this, pagerPhotosItems);
-            pagerPhotos.setAdapter(pagerPhotosAdapter);
-            pagerPhotos.setSpacing(10);
-            pagerPhotos.setOnItemClickListener(new EcoGalleryAdapterView.OnItemClickListener() {
+        mPagerPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
+        if(mPagerPhotosItems == null) {
+            mPagerPhotosItems = new ArrayList<>();
+            pagerPhotosAdapter = new PhotosAdapter(this, mPagerPhotosItems);
+            mPagerPhotos.setAdapter(pagerPhotosAdapter);
+            mPagerPhotos.setSpacing(10);
+            mPagerPhotos.setOnItemClickListener(new EcoGalleryAdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(EcoGalleryAdapterView<?> parent, View view, final int position, long id) {
-                    if(pagerPhotos.getSelectedItemPosition() == position) {
+                    if (mPagerPhotos.getSelectedItemPosition() == position) {
                         AlertDialog dialog = new AlertDialog.Builder(self).create();
                         dialog.setMessage(stringDeletePhoto);
                         dialog.setCancelable(false);
                         dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
                             public void onClick(DialogInterface dialog, int buttonId) {
                                 dialog.dismiss();
-                                ResultClass result = pagerPhotosItems.remove(position);
-                                if(!shouldSaveOnGallery) {
-                                    if(!result.getFile().delete())
+                                ResultClass result = mPagerPhotosItems.remove(position);
+                                if (!shouldSaveOnGallery) {
+                                    if (!result.getFile().delete())
                                         result.getFile().deleteOnExit();
                                 }
                                 pagerPhotosAdapter.notifyDataSetChanged();
-                                pagerPhotos.setSelection(pagerPhotos.getCount() / 2, true);
+                                mPagerPhotos.setSelection(mPagerPhotos.getCount() / 2, true);
                             }
                         });
 
@@ -263,31 +263,37 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             pagerSourcesAdapter = new SourcesAdapter(this, items);
             mPagerSources.setSpacing(30);
             mPagerSources.setDelegate((EcoGallery.EcoGalleryDelegate) self);
+            mPagerSources.setAdapter(pagerSourcesAdapter);
+            mPagerSources.setSelection(0);
+            mPagerSources.setCallbackDuringFling(false);
             mPagerSources.setOnItemSelectedListener(new EcoGalleryAdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(EcoGalleryAdapterView<?> parent, View view, int position, long id) {
                     boolean isOk = true;
-                    if(!isRollingBack && pagerPhotos.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION) {
-                        View previousView = mPagerSources.getChildAt(pagerPhotos.getOldPosition());
-                        if(previousView.getId() == R.id.source_gallery) {
-                            if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
-                                if(pagerPhotosItems.size() > 0) {
+                    int oldPosition = mPagerSources.getOldPosition();
+                    Log.d("onItemSelected", oldPosition + " -> " + position);
+                    if (!mPagerSourcesRollingBack && oldPosition != EcoGalleryAdapterView.INVALID_POSITION) {
+                        String previousViewTag = (String) mPagerSources.getChildAt(oldPosition).getTag();
+                        Log.d("onItemSelected", oldPosition + " -> " + position + " = " + previousViewTag);
+                        if (previousViewTag.equals(BUTTON_SOURCE_GALLERY)) {
+                            if (mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
+                                if (mPagerPhotosItems.size() > 0) {
                                     dropGalleryPhotosDialog();
                                     isOk = false;
                                 }
-                            } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
-                                if(galleryVideo != null) {
-                                    dropGalleryVideoDialog();
+                            } else if (mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
+                                if (galleryVideo != null) {
+                                    dropGalleryVideoDialog(oldPosition);
                                     isOk = false;
                                 }
                             }
-                        } else if(previousView.getId() == R.id.source_photo) {
-                            if(pagerPhotosItems.size() > 0) {
+                        } else if (previousViewTag.equals(BUTTON_SOURCE_PHOTO)) {
+                            if (mPagerPhotosItems.size() > 0) {
                                 dropAllPhotosDialog();
                                 isOk = false;
                             }
-                        } else if(previousView.getId() == R.id.source_video) {
-                            if(videosItems.size() > 0) {
+                        } else if (previousViewTag.equals(BUTTON_SOURCE_VIDEO)) {
+                            if (mVideosItems.size() > 0) {
                                 dropAllVideosDialog();
                                 isOk = false;
                             }
@@ -295,14 +301,14 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                     }
 /*
                     if(isRecording) {
-                        mPagerSources.setSelection(pagerPhotos.getOldPosition());
+                        mPagerSources.setSelection(mPagerPhotos.getOldPosition());
                         return;
                     }
 
-                    if(pagerPhotos.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION) {
-                        if(pagerPhotos.getChildAt(pagerPhotos.getOldPosition()).getTag() == BUTTON_SOURCE_GALLERY) {
+                    if(mPagerPhotos.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION) {
+                        if(mPagerPhotos.getChildAt(mPagerPhotos.getOldPosition()).getTag() == BUTTON_SOURCE_GALLERY) {
                             if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
-                                if(pagerPhotosItems.size() > 0)
+                                if(mPagerPhotosItems.size() > 0)
                                     dropGalleryPhotosDialog();
                             } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
                                 if(galleryVideo != null)
@@ -311,10 +317,10 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                         }
                     }
 
-                    if(pagerPhotosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_PHOTO) {
+                    if(mPagerPhotosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_PHOTO) {
                         dropAllPhotosDialog();
                     }
-                    if(videosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_VIDEO) {
+                    if(mVideosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_VIDEO) {
                         dropAllVideosDialog();
                     }
 */
@@ -322,10 +328,10 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                     if (view == null)
                         return;
 
-                    if(isOk) {
+                    if (isOk) {
                         switchSourceButtons(view.getTag());
 
-                        if(view.getTag() == BUTTON_SOURCE_PHOTO || view.getTag() == BUTTON_SOURCE_VIDEO) {
+                        if (view.getTag() == BUTTON_SOURCE_PHOTO || view.getTag() == BUTTON_SOURCE_VIDEO) {
                             showPreview();
                             hideGallery();
                         } else {
@@ -333,6 +339,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                             showGallery();
                         }
                     }
+                    mPagerSourcesRollingBack = false;
                 }
 
                 @Override
@@ -340,8 +347,6 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
                 }
             });
-            mPagerSources.setAdapter(pagerSourcesAdapter);
-            mPagerSources.setSelection(0);
         }
     }
 
@@ -383,7 +388,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         }
         /*if(mPagerSources.getSelectedView().getId() == R.id.source_gallery) {
             if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
-                if(pagerPhotosItems.size() > 0) {
+                if(mPagerPhotosItems.size() > 0) {
                     dropGalleryPhotosDialog();
                     return false;
                 }
@@ -394,12 +399,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 }
             }
         } else if(mPagerSources.getSelectedView().getId() == R.id.source_photo) {
-            if(pagerPhotosItems.size() > 0) {
+            if(mPagerPhotosItems.size() > 0) {
                 dropAllPhotosDialog();
                 return false;
             }
         } else if(mPagerSources.getSelectedView().getId() == R.id.source_video) {
-            if(videosItems.size() > 0) {
+            if(mVideosItems.size() > 0) {
                 dropAllVideosDialog();
                 return false;
             }
@@ -517,21 +522,21 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
         if(source_id == R.id.source_gallery) {
             this.getIntent().putExtra("source", "gallery");
-            for(ResultClass result : pagerPhotosItems) {
+            for(ResultClass result : mPagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
         } else if(mPagerSources.getSelectedView().getId() == R.id.source_photo) {
             this.getIntent().putExtra("source", "photo");
-            for(ResultClass result : pagerPhotosItems) {
+            for(ResultClass result : mPagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
         } else if(mPagerSources.getSelectedView().getId() == R.id.source_video) {
             this.getIntent().putExtra("source", "video");
-            if(videosItems.size() > 1) {
+            if(mVideosItems.size() > 1) {
                 processVideo();
                 return;
-            } else if(videosItems.size() == 1) {
-                items.add(videosItems.get(0).getFile().getAbsolutePath());
+            } else if(mVideosItems.size() == 1) {
+                items.add(mVideosItems.get(0).getFile().getAbsolutePath());
             }
         }
         this.getIntent().putStringArrayListExtra("items", items);
@@ -548,16 +553,16 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     public void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
         super.onRestoreInstanceState(savedInstanceState);
 
-        pagerPhotosItems = savedInstanceState.getParcelableArrayList("pagerPhotosItems");
+        mPagerPhotosItems = savedInstanceState.getParcelableArrayList("mPagerPhotosItems");
     }
 
     @Override
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        outState.putParcelableArrayList("pagerPhotosItems", pagerPhotosItems);
+        outState.putParcelableArrayList("mPagerPhotosItems", mPagerPhotosItems);
     }
 
-    private Bitmap rotatedBitmap(Bitmap bitmap) {
+    private Bitmap rotateBitmap(Bitmap bitmap) {
         return ResultClass.rotatedBitmap(bitmap, self);
     }
 
@@ -580,11 +585,11 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     void showPagerPhotos() {
-        pagerPhotos.setVisibility(View.VISIBLE);
+        mPagerPhotos.setVisibility(View.VISIBLE);
     }
 
     void hidePagerPhotos() {
-        pagerPhotos.setVisibility(View.GONE);
+        mPagerPhotos.setVisibility(View.GONE);
     }
 
     void showGallery() {
@@ -612,14 +617,14 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             videoFragment.clearSelection();
 
         if(!shouldSaveOnGallery && shouldDelete) {
-            for(ResultFile resultFile : videosItems) {
+            for(ResultFile resultFile : mVideosItems) {
                 if(!resultFile.getFile().delete())
                     resultFile.getFile().deleteOnExit();
             }
         }
 
         galleryVideo = null;
-        videosItems.clear();
+        mVideosItems.clear();
         progressBar.setProgress(0);
         totalVideoDuration = 0;
         buttonCancel.setVisibility(View.GONE);
@@ -631,13 +636,13 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             imageFragment.clearSelection();
 
         if(!shouldSaveOnGallery && shouldDelete) {
-            for(ResultClass result : pagerPhotosItems) {
+            for(ResultClass result : mPagerPhotosItems) {
                 if(!result.getFile().delete())
                     result.getFile().deleteOnExit();
             }
         }
 
-        pagerPhotosItems.clear();
+        mPagerPhotosItems.clear();
         pagerPhotosAdapter.notifyDataSetChanged();
         hidePagerPhotos();
         hideNext();
@@ -654,10 +659,10 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 List<Track> videoTracks = new LinkedList<>();
                 List<Track> audioTracks = new LinkedList<>();
 
-                Movie[] inMovies = new Movie[videosItems.size()];
-                for (int i = 0; i < videosItems.size(); i++) {
+                Movie[] inMovies = new Movie[mVideosItems.size()];
+                for (int i = 0; i < mVideosItems.size(); i++) {
                     try {
-                        inMovies[i] = MovieCreator.build(videosItems.get(i).getFile().getAbsolutePath());
+                        inMovies[i] = MovieCreator.build(mVideosItems.get(i).getFile().getAbsolutePath());
                         for (Track t : inMovies[i].getTracks()) {
                             if (t.getHandler().equals("soun")) {
                                 audioTracks.add(t);
@@ -696,7 +701,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                         self.sendBroadcast(mediaScanIntent);
                     }
                     dropVideos(true);
-                    videosItems.add(new ResultFile(ret));
+                    mVideosItems.add(new ResultFile(ret));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
@@ -870,13 +875,13 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             imageFragment = (ImageFragmentFC) fragmentManager.findFragmentByTag(TAB_IMAGE);
         }
 
-        int pagerCount = pagerPhotosItems.size();
+        int pagerCount = mPagerPhotosItems.size();
         if(count > 0 && count > pagerCount){
-            pagerPhotosItems.add(new ResultClass(imageFragment.getSelectedImageList().get(count - 1), self));
+            mPagerPhotosItems.add(new ResultClass(imageFragment.getSelectedImageList().get(count - 1), self));
             showNext();
             pagerPhotosAdapterChanged();
         }else{
-            for (Iterator<ResultClass> iterator = pagerPhotosItems.iterator(); iterator.hasNext();) {
+            for (Iterator<ResultClass> iterator = mPagerPhotosItems.iterator(); iterator.hasNext();) {
                 ResultClass result = iterator.next();
                 if (!imageFragment.getSelectedImageList().contains(result.getFile().getAbsolutePath())) {
                     iterator.remove();
@@ -884,7 +889,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             }
             if(count == 0) {
                 hideNext();
-                pagerPhotos.setVisibility(View.GONE);
+                mPagerPhotos.setVisibility(View.GONE);
             }
         }
         pagerPhotosAdapter.notifyDataSetChanged();
@@ -898,12 +903,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             public void onTabChanged(String tabId) {
 
                 if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
-                    if(pagerPhotosItems.size() > 0) {
+                    if(mPagerPhotosItems.size() > 0) {
                         dropGalleryPhotosDialog();
                     }
                 } else if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
                     if(galleryVideo != null) {
-                        dropGalleryVideoDialog();
+                        dropGalleryVideoDialog(mPagerSources.getSelectedItemPosition());
                     }
                 }
             }
@@ -928,7 +933,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                isRollingBack = true;
+                mPagerSourcesRollingBack = true;
                 mTabHost.setCurrentTabByTag(TAB_IMAGE);
                 if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
                     mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
@@ -938,7 +943,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         dialog.show();
     }
 
-    protected void dropGalleryVideoDialog() {
+    protected void dropGalleryVideoDialog(final int oldPosition) {
         AlertDialog dialog = new AlertDialog.Builder(self).create();
         dialog.setMessage(stringDeleteVideo);
         dialog.setCancelable(false);
@@ -946,16 +951,17 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
                 dropVideos(false);
-                switchSourceButtons(mPagerSources.getSelectedView().getTag());
+//                switchSourceButtons(mPagerSources.getSelectedView().getTag());
+                mPagerSources.getOnItemSelectedListener().onItemSelected(mPagerSources, mPagerSources.getSelectedView(), mPagerSources.getSelectedItemPosition(), mPagerSources.getSelectedItemId());
             }
         });
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                isRollingBack = true;
+                mPagerSourcesRollingBack = true;
                 mTabHost.setCurrentTabByTag(TAB_VIDEO);
-                if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
-                    mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
+                if(oldPosition != EcoGalleryAdapterView.INVALID_POSITION)
+                    mPagerSources.setSelection(oldPosition, true);
             }
         });
         dialog.setIcon(android.R.drawable.ic_dialog_alert);
@@ -976,7 +982,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                isRollingBack = true;
+                mPagerSourcesRollingBack = true;
                 if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
                     mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
             }
@@ -999,7 +1005,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                isRollingBack = true;
+                mPagerSourcesRollingBack = true;
                 if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
                     mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
             }
@@ -1023,7 +1029,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                isRollingBack = true;
+                mPagerSourcesRollingBack = true;
                 if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
                     mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
             }
@@ -1209,9 +1215,9 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 public void run() {
                     try {
                         Bitmap bitmap;
-                        Bitmap originalBitmap = rotatedBitmap(BitmapFactory.decodeByteArray(data, 0, data.length));
+                        Bitmap originalBitmap = rotateBitmap(BitmapFactory.decodeByteArray(data, 0, data.length));
 
-                        pagerPhotosItems.add(new ResultClass(originalBitmap, pictureFile, self));
+                        mPagerPhotosItems.add(new ResultClass(originalBitmap, pictureFile, self));
 
                         handler.post(new Runnable() {
                             @Override
@@ -1227,14 +1233,15 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                         }
 
                         //Rotates the bitmap inside the ResultClass and here. The goal is to place the thumb as soon as possible
-                        bitmap = rotatedBitmap(originalBitmap);
-                        originalBitmap.recycle();
+//                        bitmap = originalBitmap);
+//                        originalBitmap.recycle();
 
                         FileOutputStream fos = new FileOutputStream(pictureFile);
-                        bitmap.compress(Bitmap.CompressFormat.JPEG, imageCompression, fos);
+                        originalBitmap.compress(Bitmap.CompressFormat.JPEG, imageCompression, fos);
                         fos.flush();
                         fos.close();
-                        bitmap.recycle();
+                        originalBitmap.recycle();
+                        originalBitmap = null;
 
                         if(shouldSaveOnGallery) {
                             Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
@@ -1257,14 +1264,14 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     protected void pagerPhotosAdapterChanged() {
         pagerPhotosAdapter.notifyDataSetChanged();
-        pagerPhotos.setSelection(pagerPhotos.getCount() / 2, true);
-        pagerPhotos.setVisibility(View.VISIBLE);
+        mPagerPhotos.setSelection(mPagerPhotos.getCount() / 2, true);
+        mPagerPhotos.setVisibility(View.VISIBLE);
     }
 
 
     public void capturePicture() {
         // get an image from the camera
-        if(maxPhotoCount > 0 && pagerPhotosItems.size() == maxPhotoCount) {
+        if(maxPhotoCount > 0 && mPagerPhotosItems.size() == maxPhotoCount) {
             AlertDialog dialog = new AlertDialog.Builder(self).create();
             dialog.setMessage(stringMaxPhotos.replace("X", "" + maxPhotoCount));
             dialog.setCancelable(false);
@@ -1276,7 +1283,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             dialog.setIcon(android.R.drawable.ic_dialog_alert);
             dialog.show();
         } else {
-            mCamera.takePicture(null, null, mPicture);
+            if(mCamera != null) {
+                mCamera.takePicture(null, null, mPicture);
+            } else {
+                stopCamera();
+                startCamera();
+            }
         }
     }
 
@@ -1314,7 +1326,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 isRecording = true;
                 progressBar.setVisibility(View.VISIBLE);
                 int availableDuration = (maxVideoDuration - totalVideoDuration) * 1000;
-                if(videosItems.size() == 0) {
+                if(mVideosItems.size() == 0) {
                     progressBar.setProgress(0);
                     totalVideoDuration = 0;
                 }
@@ -1339,10 +1351,10 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             mp.release();
             totalVideoDuration += (duration / 1000);
 
-            videosItems.add(new ResultFile(file));
+            mVideosItems.add(new ResultFile(file));
             tempVideoFile = null;
-            pagerPhotos.setVisibility(View.GONE);
-            if(videosItems.size() > 0)
+            mPagerPhotos.setVisibility(View.GONE);
+            if(mVideosItems.size() > 0)
                 buttonCancel.setVisibility(View.VISIBLE);
         } catch (Exception e) {
             e.printStackTrace();

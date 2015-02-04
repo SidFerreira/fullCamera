@@ -5,6 +5,7 @@ import android.database.DataSetObserver;
 import android.os.Parcelable;
 import android.os.SystemClock;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.util.SparseArray;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.SoundEffectConstants;
@@ -1002,7 +1003,7 @@ public abstract class EcoGalleryAdapterView<T extends Adapter> extends ViewGroup
 
 	void checkSelectionChanged() {
 		if ((mSelectedPosition != mOldSelectedPosition) || (mSelectedRowId != mOldSelectedRowId)) {
-			selectionChanged();
+            selectionChanged();
 			mOldSelectedPosition = mSelectedPosition;
 			mOldSelectedRowId = mSelectedRowId;
 		}

@@ -50,7 +50,7 @@ public class ResultClass implements Parcelable {
             w = bitmap.getWidth() * px / bitmap.getHeight();
         }
 
-        return bitmap; //rotatedBitmap(Bitmap.createScaledBitmap(bitmap, w, h, true), context);
+        return Bitmap.createScaledBitmap(bitmap, w, h, true); //rotatedBitmap(Bitmap.createScaledBitmap(bitmap, w, h, true), context);
     }
 
 

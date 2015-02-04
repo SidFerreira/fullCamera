@@ -86,6 +86,7 @@ public class HomeFragmentActivity extends FragmentActivity implements ImageFragm
         setupTabHost();
 
         setupTabHostChangedListener();
+
     }
 
     protected void setupContentView() {
