@@ -71,23 +71,23 @@ public class VideoFragmentFC extends VideoFragment {
                 if(currentMediaModel != null) {
                     mSelectedItems.add(currentMediaModel.url.toString());
                 }
-/*                    if(!currentMediaModel.url.equals(galleryModel.url))
-                        currentMediaModel.status = false;
 
-                if(currentMediaModel.url.equals(galleryModel.url)) {
-                    currentMediaModel = galleryModel;
-                    mSelectedItems.add(currentMediaModel.url.toString());
-                } else {
-                    galleryModel.status = false;
-                    currentMediaModel = null;
-                }*/
                 adapter.notifyDataSetChanged();
 
                 if (mCallback != null) {
-                    mCallback.onVideoSelected(mSelectedItems);
+                    mCallback.onVideoSelected(mSelectedItems.size());
                 }
             }
         });
+    }
+
+    protected void clearSelection() {
+        mSelectedItems.clear();
+        if(currentMediaModel != null) {
+            currentMediaModel.status = false;
+            currentMediaModel = null;
+        }
+        mVideoAdapter.notifyDataSetChanged();
     }
 
     @Override

@@ -6,7 +6,7 @@
                 tools:context=".FullCameraActivity" android:id="@+id/baseLayout">
 
     <FrameLayout
-            android:layout_width="fill_parent"
+            android:layout_width="fill_parent" android:visibility="invisible"
             android:layout_height="fill_parent" android:id="@+id/cameraPreview">
     </FrameLayout>
     <RelativeLayout
@@ -66,7 +66,7 @@
             <ProgressBar
                     style="?android:attr/progressBarStyleHorizontal"
                     android:layout_width="fill_parent"
-                    android:layout_height="3dp" android:progressDrawable="@color/red"
+                    android:layout_height="3dp"
                     android:id="@+id/progressBar" android:layout_alignParentTop="true"
                     android:layout_centerHorizontal="true" android:layout_marginLeft="50dp"
                     android:visibility="gone"
@@ -137,6 +137,7 @@
 
             <android.support.v4.app.FragmentTabHost
                 android:id="@android:id/tabhost"
+                android:visibility="gone"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent" >
 

@@ -1,9 +1,11 @@
 package br.com.ferreiraz.fullcamera;
 
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.os.Parcel;
 import android.os.Parcelable;
@@ -18,8 +20,24 @@ public class ResultClass implements Parcelable {
     File file;
 
     public ResultClass(Bitmap bitmap, File file, Context context) {
-        int w, h;
+        this.scaled = resizeBitmap(bitmap, context);
+        this.file = file;
+    }
 
+    public ResultClass(Parcel in) {
+        file = new File(in.readString());
+        scaled = Bitmap.CREATOR.createFromParcel(in);
+    }
+
+    public ResultClass(String filePath, Context context) {
+        Bitmap bitmap = BitmapFactory.decodeFile(filePath);
+        this.file = new File(filePath);
+        this.scaled = resizeBitmap(bitmap, context);
+    }
+
+    protected Bitmap resizeBitmap(Bitmap bitmap, Context context) {
+        int w;
+        int h;
         Resources resources = context.getResources();
         DisplayMetrics metrics = resources.getDisplayMetrics();
         int px = 100 * (metrics.densityDpi / 160);
@@ -32,14 +50,9 @@ public class ResultClass implements Parcelable {
             w = bitmap.getWidth() * px / bitmap.getHeight();
         }
 
-        this.scaled = rotatedBitmap(Bitmap.createScaledBitmap(bitmap, w, h, true), context);
-        this.file = file;
+        return bitmap; //rotatedBitmap(Bitmap.createScaledBitmap(bitmap, w, h, true), context);
     }
 
-    public ResultClass(Parcel in) {
-        file = new File(in.readString());
-        scaled = Bitmap.CREATOR.createFromParcel(in);
-    }
 
     public static final Parcelable.Creator<ResultClass> CREATOR
             = new Parcelable.Creator<ResultClass>() {

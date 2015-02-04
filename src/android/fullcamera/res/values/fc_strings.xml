@@ -6,7 +6,7 @@
     <item name="source_photo" type="id"/>
     <item name="source_video" type="id"/>
 
-    <string name="full_camera">Full Camera</string>
+    <string name="full_camera">Full Camera Dev</string>
     <string name="description_switch_camera">Switch Camera</string>
     <string name="description_switch_flash">Switch Flash</string>
     <string name="description_back">Back</string>

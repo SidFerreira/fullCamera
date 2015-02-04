@@ -121,6 +121,8 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
 	private AdapterContextMenuInfo mContextMenuInfo;
 
+    private EcoGalleryDelegate delegate;
+
 	/**
 	 * If true, this onScroll is the first for this user's drag (remember, a
 	 * drag sends many onScrolls).
@@ -929,7 +931,6 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 	 * {@inheritDoc}
 	 */
 	public boolean onDown(MotionEvent e) {
-
 		// Kill any existing fling/scroll
 		mFlingRunnable.stop(false);
 
@@ -945,7 +946,10 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 		mIsFirstScroll = true;
 
 		// Must return true to get matching events for this down event.
-		return true;
+        if(delegate != null)
+    		return delegate.shouldStartScrolling();
+        else
+            return true;
 	}
 
 	/**
@@ -1259,7 +1263,11 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 
 	}
 
-	/**
+    public void setDelegate(EcoGalleryDelegate delegate) {
+        this.delegate = delegate;
+    }
+
+    /**
 	 * Responsible for fling behavior. Use {@link #startUsingVelocity(int)} to
 	 * initiate a fling. Each frame of the fling is handled in {@link #run()}. A
 	 * FlingRunnable will keep re-posting itself until the fling is done.
@@ -1388,4 +1396,8 @@ public class EcoGallery extends EcoGalleryAbsSpinner implements GestureDetector.
 			super(source);
 		}
 	}
+
+    public interface EcoGalleryDelegate {
+        public boolean shouldStartScrolling();
+    }
 }

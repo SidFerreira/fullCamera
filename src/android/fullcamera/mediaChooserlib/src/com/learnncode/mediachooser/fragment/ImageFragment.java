@@ -44,11 +44,11 @@ import com.learnncode.mediachooser.adapter.GridViewAdapter;
 
 public class ImageFragment extends Fragment {
 	protected ArrayList<String> mSelectedItems = new ArrayList<String>();
-	private ArrayList<MediaModel> mGalleryModelList;
+    protected ArrayList<MediaModel> mGalleryModelList;
 	protected GridView mImageGridView;
 	private View mView;
 	protected OnImageSelectedListener mCallback;
-	private GridViewAdapter mImageAdapter;
+    protected GridViewAdapter mImageAdapter;
 	private Cursor mImageCursor;
 
 
@@ -79,7 +79,7 @@ public class ImageFragment extends Fragment {
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 
 		if(mView == null){
-			mView = inflater.inflate(R.layout.view_grid_layout_media_chooser, container, false);
+			mView = inflater.inflate(getGridLayoutResource(), container, false);
 
 			mImageGridView = (GridView) mView.findViewById(R.id.gridViewFromMediaChooser);
 
@@ -100,8 +100,12 @@ public class ImageFragment extends Fragment {
 		return mView;
 	}
 
+    protected int getGridLayoutResource() {
+        return R.layout.view_grid_layout_media_chooser;
+    }
 
-	private void initPhoneImages(String bucketName){
+
+    private void initPhoneImages(String bucketName){
 		try {
 			final String orderBy = MediaStore.Images.Media.DATE_TAKEN;
 			String searchParams = null;

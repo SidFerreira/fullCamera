@@ -49,7 +49,7 @@ public class VideoFragment extends Fragment implements OnScrollListener {
 	public final static Uri MEDIA_EXTERNAL_CONTENT_URI = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
     public final static String MEDIA_DATA = MediaStore.Video.Media.DATA;
 
-	private GridViewAdapter mVideoAdapter;
+    protected GridViewAdapter mVideoAdapter;
     protected GridView mVideoGridView;
 	protected Cursor mCursor;
 	private int mDataColumnIndex;

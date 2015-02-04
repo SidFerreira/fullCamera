@@ -17,7 +17,7 @@ import android.media.MediaPlayer;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.*;
-import android.support.v4.app.FragmentTabHost;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
@@ -41,7 +41,7 @@ import us.feras.ecogallery.EcoGallery;
 import us.feras.ecogallery.EcoGalleryAdapterView;
 
 @SuppressWarnings("deprecation")
-public class FullCameraActivity extends HomeFragmentActivity {
+public class FullCameraActivity extends HomeFragmentActivity implements EcoGallery.EcoGalleryDelegate {
 
     public static final String BUTTON_SOURCE_GALLERY = "BUTTON_SOURCE_GALLERY";
     public static final String BUTTON_SOURCE_PHOTO = "BUTTON_SOURCE_PHOTO";
@@ -54,6 +54,7 @@ public class FullCameraActivity extends HomeFragmentActivity {
     private SurfaceView mPreview;
     private MediaRecorder mMediaRecorder;
     private boolean isRecording = false;
+    private boolean isRollingBack = false;
     static private int cameraId = 0;
 
     private SurfaceHolder               surfaceHolder;
@@ -61,16 +62,20 @@ public class FullCameraActivity extends HomeFragmentActivity {
     protected Activity                  self;
     private View.OnClickListener        onClickListener;
     private int                         currentFlashMode = -1;
-    private EcoGallery                  pagerSources;
+    private EcoGallery mPagerSources;
     private SourcesAdapter              pagerSourcesAdapter;
     private EcoGallery                  pagerPhotos;
     private PhotosAdapter               pagerPhotosAdapter;
-    private ArrayList<ResultClass>      pagerPhotosItems;
 
+    private ArrayList<ResultClass>      pagerPhotosItems;
+    private ArrayList<ResultFile>       videosItems = new ArrayList<>();
     private File                        tempVideoFile;
-    private ArrayList<ResultFile>       videosItems = new ArrayList<ResultFile>();
+
+    private VideoFragmentFC             videoFragment;
+    private ImageFragmentFC             imageFragment;
 
     private File                        galleryVideo;
+    private FrameLayout                 mPreviewHolder;
 
     private ProgressBarAnimation        progressAnimation;
     private ProgressBar                 progressBar;
@@ -109,13 +114,6 @@ public class FullCameraActivity extends HomeFragmentActivity {
     private String                      stringProcessingVideos  = "Processing video";
     private String                      stringAppFolder         = "fullcam";
 
-    private String getString(Bundle bundle, String key, String defaultValue){
-        if(bundle != null)
-            if(bundle.containsKey(key))
-                return bundle.getString(key);
-        return defaultValue;
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         if(savedInstanceState == null)
@@ -130,15 +128,14 @@ public class FullCameraActivity extends HomeFragmentActivity {
 
         setupReferencesFC();
 
-        initPagerSources();
-
         initPagerPhotos();
 
-//        startCamera();
+        initPagerSources();
 
-
+        startCamera();
     }
 
+    //region SETUP and Init
     private void setupReferencesFC() {
         buttonSwitchCamera  = (ImageButton) findViewById(R.id.switchCamera);
         buttonBack          = (ImageButton) findViewById(R.id.back);
@@ -148,6 +145,8 @@ public class FullCameraActivity extends HomeFragmentActivity {
         buttonFlashOn       = (ImageButton) findViewById(R.id.flashOn);
         buttonFlashAuto     = (ImageButton) findViewById(R.id.flashAuto);
         buttonFlashOff      = (ImageButton) findViewById(R.id.flashOff);
+
+        mPreviewHolder = (FrameLayout) findViewById(R.id.cameraPreview);
 
         progressBar         = (ProgressBar) findViewById(R.id.progressBar);
 
@@ -205,10 +204,10 @@ public class FullCameraActivity extends HomeFragmentActivity {
     private void initPagerPhotos() {
         pagerPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
         if(pagerPhotosItems == null) {
-            pagerPhotosItems = new ArrayList<ResultClass>();
+            pagerPhotosItems = new ArrayList<>();
             pagerPhotosAdapter = new PhotosAdapter(this, pagerPhotosItems);
             pagerPhotos.setAdapter(pagerPhotosAdapter);
-            pagerPhotos.setSpacing(pagerPhotos.getHeight() / 10);
+            pagerPhotos.setSpacing(10);
             pagerPhotos.setOnItemClickListener(new EcoGalleryAdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(EcoGalleryAdapterView<?> parent, View view, final int position, long id) {
@@ -243,9 +242,9 @@ public class FullCameraActivity extends HomeFragmentActivity {
     }
 
     private void initPagerSources() {
-        pagerSources = (EcoGallery) findViewById(R.id.pagerSources);
+        mPagerSources = (EcoGallery) findViewById(R.id.pagerSources);
         if(pagerSourcesAdapter == null) {
-            ArrayList<ImageButton> items = new ArrayList<ImageButton>();
+            ArrayList<ImageButton> items = new ArrayList<>();
             setBackgroundOn(buttonSourceGallery, R.drawable.fullcamgallerystyle);
             buttonSourceGallery.setId(R.id.source_gallery);
             buttonSourceGallery.setTag(BUTTON_SOURCE_GALLERY);
@@ -262,86 +261,77 @@ public class FullCameraActivity extends HomeFragmentActivity {
             items.add(buttonSourceVideo);
 
             pagerSourcesAdapter = new SourcesAdapter(this, items);
-            pagerSources.setSpacing(30);
-            pagerSources.setOnItemSelectedListener(new EcoGalleryAdapterView.OnItemSelectedListener() {
+            mPagerSources.setSpacing(30);
+            mPagerSources.setDelegate((EcoGallery.EcoGalleryDelegate) self);
+            mPagerSources.setOnItemSelectedListener(new EcoGalleryAdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(EcoGalleryAdapterView<?> parent, View view, int position, long id) {
+                    boolean isOk = true;
+                    if(!isRollingBack && pagerPhotos.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION) {
+                        View previousView = mPagerSources.getChildAt(pagerPhotos.getOldPosition());
+                        if(previousView.getId() == R.id.source_gallery) {
+                            if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
+                                if(pagerPhotosItems.size() > 0) {
+                                    dropGalleryPhotosDialog();
+                                    isOk = false;
+                                }
+                            } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
+                                if(galleryVideo != null) {
+                                    dropGalleryVideoDialog();
+                                    isOk = false;
+                                }
+                            }
+                        } else if(previousView.getId() == R.id.source_photo) {
+                            if(pagerPhotosItems.size() > 0) {
+                                dropAllPhotosDialog();
+                                isOk = false;
+                            }
+                        } else if(previousView.getId() == R.id.source_video) {
+                            if(videosItems.size() > 0) {
+                                dropAllVideosDialog();
+                                isOk = false;
+                            }
+                        }
+                    }
+/*
                     if(isRecording) {
-                        pagerSources.setSelection(pagerPhotos.getOldPosition());
+                        mPagerSources.setSelection(pagerPhotos.getOldPosition());
                         return;
                     }
-                    if(pagerPhotosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_PHOTO) {
-                        AlertDialog dialog = new AlertDialog.Builder(self).create();
-                        dialog.setMessage(stringDeleteAllPhotos);
-                        dialog.setCancelable(false);
-                        dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int buttonId) {
-                                dialog.dismiss();
-                                pagerPhotosItems.clear();
-                                pagerPhotosAdapter.notifyDataSetChanged();
-                                pagerPhotos.setVisibility(View.GONE);
+
+                    if(pagerPhotos.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION) {
+                        if(pagerPhotos.getChildAt(pagerPhotos.getOldPosition()).getTag() == BUTTON_SOURCE_GALLERY) {
+                            if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
+                                if(pagerPhotosItems.size() > 0)
+                                    dropGalleryPhotosDialog();
+                            } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
+                                if(galleryVideo != null)
+                                    dropGalleryVideoDialog();
                             }
-                        });
-                        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int buttonId) {
-                                dialog.dismiss();
-                                pagerSources.setSelection(pagerPhotos.getOldPosition());
-                            }
-                        });
-                        dialog.setIcon(android.R.drawable.ic_dialog_alert);
-                        dialog.show();
+                        }
                     }
 
-                    if(videosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_VIDEO) {
-                        AlertDialog dialog = new AlertDialog.Builder(self).create();
-                        dialog.setMessage(stringDeleteAllVideos);
-                        dialog.setCancelable(false);
-                        dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int buttonId) {
-                                dialog.dismiss();
-                                dropVideos(true);
-                            }
-                        });
-                        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
-                            public void onClick(DialogInterface dialog, int buttonId) {
-                                dialog.dismiss();
-                                pagerSources.setSelection(pagerPhotos.getOldPosition());
-                            }
-                        });
-                        dialog.setIcon(android.R.drawable.ic_dialog_alert);
-                        dialog.show();
+                    if(pagerPhotosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_PHOTO) {
+                        dropAllPhotosDialog();
                     }
+                    if(videosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_VIDEO) {
+                        dropAllVideosDialog();
+                    }
+*/
 
                     if (view == null)
                         return;
 
-                    if (view.getTag() == BUTTON_SOURCE_GALLERY) {
-                        buttonSourceGallery.setClickable(true);
-                        buttonSourceGallery.setEnabled(true);
+                    if(isOk) {
+                        switchSourceButtons(view.getTag());
 
-                        buttonSourcePhoto.setClickable(false);
-                        buttonSourcePhoto.setEnabled(false);
-
-                        buttonSourceVideo.setClickable(false);
-                        buttonSourceVideo.setEnabled(false);
-                    } else if (view.getTag() == BUTTON_SOURCE_PHOTO) {
-                        buttonSourceGallery.setClickable(false);
-                        buttonSourceGallery.setEnabled(false);
-
-                        buttonSourcePhoto.setClickable(true);
-                        buttonSourcePhoto.setEnabled(true);
-
-                        buttonSourceVideo.setClickable(false);
-                        buttonSourceVideo.setEnabled(false);
-                    } else if (view.getTag() == BUTTON_SOURCE_VIDEO) {
-                        buttonSourceGallery.setClickable(false);
-                        buttonSourceGallery.setEnabled(false);
-
-                        buttonSourcePhoto.setClickable(false);
-                        buttonSourcePhoto.setEnabled(false);
-
-                        buttonSourceVideo.setClickable(true);
-                        buttonSourceVideo.setEnabled(true);
+                        if(view.getTag() == BUTTON_SOURCE_PHOTO || view.getTag() == BUTTON_SOURCE_VIDEO) {
+                            showPreview();
+                            hideGallery();
+                        } else {
+                            hidePreview();
+                            showGallery();
+                        }
                     }
                 }
 
@@ -350,10 +340,95 @@ public class FullCameraActivity extends HomeFragmentActivity {
 
                 }
             });
-            pagerSources.setAdapter(pagerSourcesAdapter);
-            pagerSources.setSelection(1);
+            mPagerSources.setAdapter(pagerSourcesAdapter);
+            mPagerSources.setSelection(0);
         }
     }
+
+    protected void switchSourceButtons(Object viewTag) {
+        if (viewTag == BUTTON_SOURCE_GALLERY) {
+            buttonSourceGallery.setClickable(true);
+            buttonSourceGallery.setEnabled(true);
+
+            buttonSourcePhoto.setClickable(false);
+            buttonSourcePhoto.setEnabled(false);
+
+            buttonSourceVideo.setClickable(false);
+            buttonSourceVideo.setEnabled(false);
+        } else if (viewTag == BUTTON_SOURCE_PHOTO) {
+            buttonSourceGallery.setClickable(false);
+            buttonSourceGallery.setEnabled(false);
+
+            buttonSourcePhoto.setClickable(true);
+            buttonSourcePhoto.setEnabled(true);
+
+            buttonSourceVideo.setClickable(false);
+            buttonSourceVideo.setEnabled(false);
+        } else if (viewTag == BUTTON_SOURCE_VIDEO) {
+            buttonSourceGallery.setClickable(false);
+            buttonSourceGallery.setEnabled(false);
+
+            buttonSourcePhoto.setClickable(false);
+            buttonSourcePhoto.setEnabled(false);
+
+            buttonSourceVideo.setClickable(true);
+            buttonSourceVideo.setEnabled(true);
+        }
+    }
+
+
+    public boolean shouldStartScrolling() {
+        if(isRecording) {
+            return false;
+        }
+        /*if(mPagerSources.getSelectedView().getId() == R.id.source_gallery) {
+            if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
+                if(pagerPhotosItems.size() > 0) {
+                    dropGalleryPhotosDialog();
+                    return false;
+                }
+            } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
+                if(galleryVideo != null) {
+                    dropGalleryVideoDialog();
+                    return false;
+                }
+            }
+        } else if(mPagerSources.getSelectedView().getId() == R.id.source_photo) {
+            if(pagerPhotosItems.size() > 0) {
+                dropAllPhotosDialog();
+                return false;
+            }
+        } else if(mPagerSources.getSelectedView().getId() == R.id.source_video) {
+            if(videosItems.size() > 0) {
+                dropAllVideosDialog();
+                return false;
+            }
+        }*/
+        return true;
+    }
+
+
+    protected void onClickProxy(ImageButton v) {
+        int id = v.getId();
+
+        if(id == R.id.next)
+            finishWithItems();
+        else if(id == R.id.back)
+            finishWithoutItems();
+        else if(id == R.id.switchCamera)
+            switchCameras();
+        else if(id == R.id.flashOn || id == R.id.flashOff || id == R.id.flashAuto)
+            flashSwitch();
+        else if(id == R.id.source_photo)
+            capturePicture();
+        else if(id == R.id.source_video)
+            captureVideo();
+        else if(id == R.id.cancel)
+            dropVideosDialog();
+    }
+    //endregion
+
+    //region Camera Switches
 
     protected void stopCamera() {
         if(mCamera != null) {
@@ -378,45 +453,12 @@ public class FullCameraActivity extends HomeFragmentActivity {
         }
         stopCamera();
         startCamera();
-
-/*        if(camera != null) {
-            camera.stopPreview();
-            camera.setPreviewCallback(null);
-            camera.release();
-            camera = null;
-        }
-        if(surfaceHolder != null) {
-            surfaceHolder.removeCallback(surfaceHolderCallback);
-            surfaceHolder = null;
-        }
-
-        if(mPreview != null) {
-            baseLayout.removeView(surfaceView);
-        }
-
-        currentCameraId++;
-        if(currentCameraId >= Camera.getNumberOfCameras()) {
-            currentCameraId = 0;
-        }
-        cameraId = currentCameraId;
-
-        surfaceView = new SurfaceView(this);
-        RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.MATCH_PARENT);
-        baseLayout.addView(surfaceView, 0, layoutParams);
-
-
-        surfaceHolder = surfaceView.getHolder();
-//        surfaceHolderCallback = createSurfaceHolderCallback();
-        surfaceHolder.addCallback(surfaceHolderCallback);
-        buttonSwitchCamera.setVisibility(View.VISIBLE);
-        currentFlashMode = 0;
-        flashSwitch();*/
     }
 
     protected void flashHide() {
         buttonFlashOn.setVisibility( View.GONE );
         buttonFlashAuto.setVisibility( View.GONE );
-        buttonFlashOff.setVisibility( View.GONE );
+        buttonFlashOff.setVisibility(View.GONE);
     }
 
     private void flashSwitch() {
@@ -457,44 +499,33 @@ public class FullCameraActivity extends HomeFragmentActivity {
             }
         }
     }
+    //endregion
 
-    protected void onClickProxy(ImageButton v) {
-//        Log.d("Camera", "Touch");
-        int id = v.getId();
+    //region Helper Methods
 
-        if(id == R.id.next)
-            finishWithItems();
-        else if(id == R.id.back)
-            finishWithoutItems();
-        else if(id == R.id.switchCamera)
-            switchCameras();
-        else if(id == R.id.flashOn || id == R.id.flashOff || id == R.id.flashAuto)
-            flashSwitch();
-        else if(id == R.id.source_photo)
-            capturePicture();
-        else if(id == R.id.source_video)
-            captureVideo();
-        else if(id == R.id.cancel)
-            dropVideosDialog();
+    private String getString(Bundle bundle, String key, String defaultValue){
+        if(bundle != null)
+            if(bundle.containsKey(key))
+                return bundle.getString(key);
+        return defaultValue;
     }
 
-
     protected void finishWithItems() {
-        ArrayList<String> items = new ArrayList<String>();
+        ArrayList<String> items = new ArrayList<>();
         this.setResult(Activity.RESULT_OK, this.getIntent());
-        int source_id = pagerSources.getSelectedView().getId();
+        int source_id = mPagerSources.getSelectedView().getId();
 
         if(source_id == R.id.source_gallery) {
             this.getIntent().putExtra("source", "gallery");
             for(ResultClass result : pagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
-        } else if(pagerSources.getSelectedView().getId() == R.id.source_photo) {
+        } else if(mPagerSources.getSelectedView().getId() == R.id.source_photo) {
             this.getIntent().putExtra("source", "photo");
             for(ResultClass result : pagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
-        } else if(pagerSources.getSelectedView().getId() == R.id.source_video) {
+        } else if(mPagerSources.getSelectedView().getId() == R.id.source_video) {
             this.getIntent().putExtra("source", "video");
             if(videosItems.size() > 1) {
                 processVideo();
@@ -507,6 +538,112 @@ public class FullCameraActivity extends HomeFragmentActivity {
         this.finish();
     }
 
+
+    protected void finishWithoutItems() {
+        this.setResult(Activity.RESULT_CANCELED, this.getIntent());
+        this.finish();
+    }
+
+    @Override
+    public void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+
+        pagerPhotosItems = savedInstanceState.getParcelableArrayList("pagerPhotosItems");
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putParcelableArrayList("pagerPhotosItems", pagerPhotosItems);
+    }
+
+    private Bitmap rotatedBitmap(Bitmap bitmap) {
+        return ResultClass.rotatedBitmap(bitmap, self);
+    }
+
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+    private void setBackgroundOn(View v, int d) {
+        int sdk = android.os.Build.VERSION.SDK_INT;
+        if(sdk < android.os.Build.VERSION_CODES.JELLY_BEAN) {
+            v.setBackgroundDrawable( getResources().getDrawable(d) );
+        } else {
+            v.setBackground( getResources().getDrawable(d));
+        }
+    }
+
+    void showNext() {
+        buttonNext.setVisibility(View.VISIBLE);
+    }
+
+    void hideNext() {
+        buttonNext.setVisibility(View.GONE);
+    }
+
+    void showPagerPhotos() {
+        pagerPhotos.setVisibility(View.VISIBLE);
+    }
+
+    void hidePagerPhotos() {
+        pagerPhotos.setVisibility(View.GONE);
+    }
+
+    void showGallery() {
+        mTabHost.setVisibility(View.VISIBLE);
+    }
+
+    void hideGallery() {
+        mTabHost.setVisibility(View.GONE);
+    }
+
+    void showPreview() {
+        mPreviewHolder.setVisibility(View.VISIBLE);
+    }
+
+    void hidePreview() {
+        mPreviewHolder.setVisibility(View.GONE);
+    }
+
+    public static int getMaxVideoDuration() {
+        return maxVideoDuration;
+    }
+
+    public void dropVideos(boolean shouldDelete) {
+        if(videoFragment != null)
+            videoFragment.clearSelection();
+
+        if(!shouldSaveOnGallery && shouldDelete) {
+            for(ResultFile resultFile : videosItems) {
+                if(!resultFile.getFile().delete())
+                    resultFile.getFile().deleteOnExit();
+            }
+        }
+
+        galleryVideo = null;
+        videosItems.clear();
+        progressBar.setProgress(0);
+        totalVideoDuration = 0;
+        buttonCancel.setVisibility(View.GONE);
+        hideNext();
+    }
+
+    protected void dropPhotos(boolean shouldDelete) {
+        if(imageFragment != null)
+            imageFragment.clearSelection();
+
+        if(!shouldSaveOnGallery && shouldDelete) {
+            for(ResultClass result : pagerPhotosItems) {
+                if(!result.getFile().delete())
+                    result.getFile().deleteOnExit();
+            }
+        }
+
+        pagerPhotosItems.clear();
+        pagerPhotosAdapter.notifyDataSetChanged();
+        hidePagerPhotos();
+        hideNext();
+    }
+
+
     protected void processVideo() {
         progressDialog = ProgressDialog.show(this, "", stringProcessingVideos, true);
         final Handler handler = new Handler();
@@ -514,8 +651,8 @@ public class FullCameraActivity extends HomeFragmentActivity {
             @Override
             public void run() {
 
-                List<Track> videoTracks = new LinkedList<Track>();
-                List<Track> audioTracks = new LinkedList<Track>();
+                List<Track> videoTracks = new LinkedList<>();
+                List<Track> audioTracks = new LinkedList<>();
 
                 Movie[] inMovies = new Movie[videosItems.size()];
                 for (int i = 0; i < videosItems.size(); i++) {
@@ -578,9 +715,274 @@ public class FullCameraActivity extends HomeFragmentActivity {
         thread.start();
     }
 
-    protected void finishWithoutItems() {
-        this.setResult(Activity.RESULT_CANCELED, this.getIntent());
-        this.finish();
+    //endregion
+
+    //region Adapters
+
+    private class PhotosAdapter extends BaseAdapter {
+        private Context context;
+        private List<ResultClass> items;
+
+        PhotosAdapter(Context context, List<ResultClass> items) {
+            this.context = context;
+            this.items = items;
+        }
+
+        public int getCount() {
+            return (items != null) ? items.size() : 0;
+        }
+
+        public Object getItem(int position) {
+            return items.get(position).scaled;
+        }
+
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+        public View getView(int position, View convertView, ViewGroup parent) {
+            ImageView imageView;
+            if(convertView == null) {
+                imageView = new ImageView(context);
+                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                imageView.setAdjustViewBounds(true);
+                EcoGallery.LayoutParams layoutParams = new EcoGallery.LayoutParams(EcoGallery.LayoutParams.WRAP_CONTENT, EcoGallery.LayoutParams.MATCH_PARENT);
+                imageView.setLayoutParams(layoutParams);
+            } else {
+                imageView = (ImageView) convertView;
+            }
+            imageView.setImageBitmap(items.get(position).getScaled());
+
+            return imageView;
+        }
+
+    }
+
+    private class SourcesAdapter extends BaseAdapter {
+        private Context context;
+        private List<ImageButton> items;
+
+        SourcesAdapter(Context context, List<ImageButton> items) {
+            this.context = context;
+            this.items = items;
+            Log.d("Context", this.context.getPackageName()); //Avoid "unused" message on IDE
+        }
+
+        public int getCount() {
+            return (items != null) ? items.size() : 0;
+        }
+
+        public Object getItem(int position) {
+            return items.get(position);
+        }
+
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
+        public View getView(int position, View convertView, ViewGroup parent) {
+            return items.get(position);
+        }
+    }
+
+    //endregion
+
+    //region Media Chooser
+
+
+    @Override
+    protected void setupHeaderUI() { }
+
+    @Override
+    protected void setHeaderTitle(int id_text, int id_image) { }
+
+    @Override
+    protected void setupContentView() {
+        setContentView(R.layout.activity_full_cam);
+    }
+
+    @Override
+    protected Class<? extends ImageFragment> getImageFragmentClass() {
+        return ImageFragmentFC.class;
+    }
+
+    @Override
+    protected Class<? extends VideoFragment> getVideoFragmentClass() {
+        return VideoFragmentFC.class;
+    }
+
+    @Override
+    protected void setupTabTitle(int i) {
+        TabWidget tabWidget = mTabHost.getTabWidget();
+        TextView textView = (TextView) tabWidget.getChildAt(i).findViewById(android.R.id.title);
+        if(textView.getLayoutParams() instanceof RelativeLayout.LayoutParams){
+
+            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) textView.getLayoutParams();
+            params.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            params.addRule(RelativeLayout.CENTER_VERTICAL);
+            params.height = RelativeLayout.LayoutParams.MATCH_PARENT;
+            params.width  = RelativeLayout.LayoutParams.MATCH_PARENT;
+            params.alignWithParent = true;
+            params.setMargins(0,0,0,0);
+            textView.setGravity(Gravity.CENTER);
+            textView.setPadding(0,0,0,0);
+            textView.setLayoutParams(params);
+            textView.setBackgroundColor(Color.BLACK);
+
+        }else if(textView.getLayoutParams() instanceof LinearLayout.LayoutParams){
+            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) textView.getLayoutParams();
+            params.gravity = Gravity.CENTER;
+            textView.setLayoutParams(params);
+        }
+        textView.setTextSize(convertDipToPixels(10));
+    }
+
+    @Override
+    protected void changeTabTitleUnselected(int tabNumber) {
+    }
+
+    @Override
+    protected void changeTabTitleSelected(int tabNumber) {
+    }
+
+
+    @Override
+    public void onVideoSelected(int count){
+        if(videoFragment == null) {
+            android.support.v4.app.FragmentManager fragmentManager = getSupportFragmentManager();
+            videoFragment = (VideoFragmentFC) fragmentManager.findFragmentByTag(TAB_VIDEO);
+        }
+        if(count > 0){
+            galleryVideo = new File(videoFragment.currentMediaModel.url);
+            showNext();
+        }else{
+            galleryVideo = null;
+            hideNext();
+        }
+    }
+
+    @Override
+    public void onImageSelected(int count){
+        if(imageFragment == null) {
+            android.support.v4.app.FragmentManager fragmentManager = getSupportFragmentManager();
+            imageFragment = (ImageFragmentFC) fragmentManager.findFragmentByTag(TAB_IMAGE);
+        }
+
+        int pagerCount = pagerPhotosItems.size();
+        if(count > 0 && count > pagerCount){
+            pagerPhotosItems.add(new ResultClass(imageFragment.getSelectedImageList().get(count - 1), self));
+            showNext();
+            pagerPhotosAdapterChanged();
+        }else{
+            for (Iterator<ResultClass> iterator = pagerPhotosItems.iterator(); iterator.hasNext();) {
+                ResultClass result = iterator.next();
+                if (!imageFragment.getSelectedImageList().contains(result.getFile().getAbsolutePath())) {
+                    iterator.remove();
+                }
+            }
+            if(count == 0) {
+                hideNext();
+                pagerPhotos.setVisibility(View.GONE);
+            }
+        }
+        pagerPhotosAdapter.notifyDataSetChanged();
+    }
+
+    @Override
+    protected void setupTabHostChangedListener() {
+        mTabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
+
+            @Override
+            public void onTabChanged(String tabId) {
+
+                if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
+                    if(pagerPhotosItems.size() > 0) {
+                        dropGalleryPhotosDialog();
+                    }
+                } else if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
+                    if(galleryVideo != null) {
+                        dropGalleryVideoDialog();
+                    }
+                }
+            }
+        });
+    }
+
+    //endregion
+
+    //region Sources Dialogs
+
+    protected void dropGalleryPhotosDialog() {
+        AlertDialog dialog = new AlertDialog.Builder(self).create();
+        dialog.setMessage(stringDeleteAllPhotos);
+        dialog.setCancelable(false);
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                dropPhotos(false);
+                switchSourceButtons(mPagerSources.getSelectedView().getTag());
+            }
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                isRollingBack = true;
+                mTabHost.setCurrentTabByTag(TAB_IMAGE);
+                if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
+                    mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
+            }
+        });
+        dialog.setIcon(android.R.drawable.ic_dialog_alert);
+        dialog.show();
+    }
+
+    protected void dropGalleryVideoDialog() {
+        AlertDialog dialog = new AlertDialog.Builder(self).create();
+        dialog.setMessage(stringDeleteVideo);
+        dialog.setCancelable(false);
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                dropVideos(false);
+                switchSourceButtons(mPagerSources.getSelectedView().getTag());
+            }
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                isRollingBack = true;
+                mTabHost.setCurrentTabByTag(TAB_VIDEO);
+                if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
+                    mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
+            }
+        });
+        dialog.setIcon(android.R.drawable.ic_dialog_alert);
+        dialog.show();
+    }
+
+    protected void dropAllPhotosDialog() {
+        AlertDialog dialog = new AlertDialog.Builder(self).create();
+        dialog.setMessage(stringDeleteAllPhotos);
+        dialog.setCancelable(false);
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                dropPhotos(true);
+                switchSourceButtons(mPagerSources.getSelectedView().getTag());
+            }
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                isRollingBack = true;
+                if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
+                    mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
+            }
+        });
+        dialog.setIcon(android.R.drawable.ic_dialog_alert);
+        dialog.show();
     }
 
     protected void dropVideosDialog() {
@@ -590,36 +992,49 @@ public class FullCameraActivity extends HomeFragmentActivity {
         dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
-                if(pagerSources.getSelectedItemId() == R.id.source_video) {
-                    dropVideos(true);
-                } else {
-                    dropVideos(false);
-                }
+                dropVideos(true);
+                switchSourceButtons(mPagerSources.getSelectedView().getTag());
             }
         });
         dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int buttonId) {
                 dialog.dismiss();
+                isRollingBack = true;
+                if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
+                    mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
             }
         });
         dialog.setIcon(android.R.drawable.ic_dialog_alert);
         dialog.show();
     }
 
-    public void dropVideos(boolean shouldDelete) {
-        if(!shouldSaveOnGallery && shouldDelete) {
-            for(ResultFile resultFile : videosItems) {
-                if(!resultFile.getFile().delete())
-                    resultFile.getFile().deleteOnExit();
+
+    protected void dropAllVideosDialog() {
+        AlertDialog dialog = new AlertDialog.Builder(self).create();
+        dialog.setMessage(stringDeleteAllVideos);
+        dialog.setCancelable(false);
+        dialog.setButton(DialogInterface.BUTTON_POSITIVE, stringOk, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                dropVideos(true);
+                switchSourceButtons(mPagerSources.getSelectedView().getTag());
             }
-        }
-        videosItems.clear();
-        buttonCancel.setVisibility(View.GONE);
-        progressBar.setProgress(0);
-        totalVideoDuration = 0;
+        });
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+                isRollingBack = true;
+                if(mPagerSources.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION)
+                    mPagerSources.setSelection(mPagerSources.getOldPosition(), true);
+            }
+        });
+        dialog.setIcon(android.R.drawable.ic_dialog_alert);
+        dialog.show();
     }
 
-    //region Camera Implementation based on Google Code
+    //endregion
+
+    //region Camera Implementation based on Google's Code
     //Reference:
     // http://developer.android.com/guide/topics/media/camera.html#preview-layout
 
@@ -634,11 +1049,8 @@ public class FullCameraActivity extends HomeFragmentActivity {
                 mCamera = getCameraInstance();
 
             mPreview = new CameraPreview(this, mCamera);
-            FrameLayout preview = (FrameLayout) findViewById(R.id.cameraPreview);
-            if(preview.getChildCount() > 0) {
-                preview.removeViewAt(0);
-            }
-            preview.addView(mPreview);
+            mPreviewHolder.removeAllViews();
+            mPreviewHolder.addView(mPreview);
             currentFlashMode = 1; //AUTO
             flashSet();
         }
@@ -672,9 +1084,9 @@ public class FullCameraActivity extends HomeFragmentActivity {
     public static final int MEDIA_TYPE_MERGED_VIDEO = 3;
 
     /** Create a file Uri for saving an image or video *
-    private static Uri getOutputMediaFileUri(int type){
-        return Uri.fromFile(getOutputMediaFile(type));
-    }*/
+     private static Uri getOutputMediaFileUri(int type){
+     return Uri.fromFile(getOutputMediaFile(type));
+     }*/
 
     /** Create a File for saving an image or video */
     private File getOutputMediaFile(int type){
@@ -797,16 +1209,14 @@ public class FullCameraActivity extends HomeFragmentActivity {
                 public void run() {
                     try {
                         Bitmap bitmap;
-                        Bitmap originalBitmap = BitmapFactory.decodeByteArray(data, 0, data.length);
+                        Bitmap originalBitmap = rotatedBitmap(BitmapFactory.decodeByteArray(data, 0, data.length));
 
                         pagerPhotosItems.add(new ResultClass(originalBitmap, pictureFile, self));
 
                         handler.post(new Runnable() {
                             @Override
                             public void run() {
-                                pagerPhotosAdapter.notifyDataSetChanged();
-                                pagerPhotos.setSelection(pagerPhotos.getCount() / 2, true);
-                                pagerPhotos.setVisibility(View.VISIBLE);
+                                pagerPhotosAdapterChanged();
                             }
                         });
 
@@ -844,6 +1254,12 @@ public class FullCameraActivity extends HomeFragmentActivity {
             thread.start();
         }
     };
+
+    protected void pagerPhotosAdapterChanged() {
+        pagerPhotosAdapter.notifyDataSetChanged();
+        pagerPhotos.setSelection(pagerPhotos.getCount() / 2, true);
+        pagerPhotos.setVisibility(View.VISIBLE);
+    }
 
 
     public void capturePicture() {
@@ -895,8 +1311,8 @@ public class FullCameraActivity extends HomeFragmentActivity {
                 mMediaRecorder.start();
 
                 // inform the user that recording has started
-                //TODO
                 isRecording = true;
+                progressBar.setVisibility(View.VISIBLE);
                 int availableDuration = (maxVideoDuration - totalVideoDuration) * 1000;
                 if(videosItems.size() == 0) {
                     progressBar.setProgress(0);
@@ -935,186 +1351,4 @@ public class FullCameraActivity extends HomeFragmentActivity {
 
     //endregion
 
-
-    @Override
-    public void onRestoreInstanceState(Bundle savedInstanceState) {
-        super.onRestoreInstanceState(savedInstanceState);
-
-        pagerPhotosItems = savedInstanceState.getParcelableArrayList("pagerPhotosItems");
-    }
-
-    @Override
-    public void onSaveInstanceState(Bundle outState) {
-        super.onSaveInstanceState(outState);
-        outState.putParcelableArrayList("pagerPhotosItems", pagerPhotosItems);
-    }
-
-    private Bitmap rotatedBitmap(Bitmap bitmap) {
-        return ResultClass.rotatedBitmap(bitmap, self);
-    }
-
-    @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-    private void setBackgroundOn(View v, int d) {
-        int sdk = android.os.Build.VERSION.SDK_INT;
-        if(sdk < android.os.Build.VERSION_CODES.JELLY_BEAN) {
-            v.setBackgroundDrawable( getResources().getDrawable(d) );
-        } else {
-            v.setBackground( getResources().getDrawable(d));
-        }
-    }
-
-    private class PhotosAdapter extends BaseAdapter {
-        private Context context;
-        private List<ResultClass> items;
-
-        PhotosAdapter(Context context, List<ResultClass> items) {
-            this.context = context;
-            this.items = items;
-        }
-
-        public int getCount() {
-            return (items != null) ? items.size() : 0;
-        }
-
-        public Object getItem(int position) {
-            return items.get(position).scaled;
-        }
-
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-        public View getView(int position, View convertView, ViewGroup parent) {
-            ImageView imageView;
-            if(convertView == null) {
-                imageView = new ImageView(context);
-                imageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-                imageView.setAdjustViewBounds(true);
-                EcoGallery.LayoutParams layoutParams = new EcoGallery.LayoutParams(EcoGallery.LayoutParams.WRAP_CONTENT, EcoGallery.LayoutParams.MATCH_PARENT);
-                imageView.setLayoutParams(layoutParams);
-            } else {
-                imageView = (ImageView) convertView;
-            }
-            imageView.setImageBitmap(items.get(position).getScaled());
-
-            return imageView;
-            //return convertView;
-        }
-
-    }
-
-    private class SourcesAdapter extends BaseAdapter {
-        private Context context;
-        private List<ImageButton> items;
-
-        SourcesAdapter(Context context, List<ImageButton> items) {
-            this.context = context;
-            this.items = items;
-            Log.d("Context", this.context.getPackageName()); //Avoid "unused" message on IDE
-        }
-
-        public int getCount() {
-            return (items != null) ? items.size() : 0;
-        }
-
-        public Object getItem(int position) {
-            return items.get(position);
-        }
-
-        public long getItemId(int position) {
-            return position;
-        }
-
-        @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
-        public View getView(int position, View convertView, ViewGroup parent) {
-            return items.get(position);
-        }
-    }
-
-    public static int getMaxVideoDuration() {
-        return maxVideoDuration;
-    }
-
-    //region Media Chooser
-
-
-    @Override
-    protected void setupHeaderUI() { }
-
-    @Override
-    protected void setHeaderTitle(int id_text, int id_image) { }
-
-    @Override
-    protected void setupContentView() {
-        setContentView(R.layout.activity_full_cam);
-    }
-
-    @Override
-    protected Class<? extends ImageFragment> getImageFragmentClass() {
-        return ImageFragmentFC.class;
-    }
-
-    @Override
-    protected Class<? extends VideoFragment> getVideoFragmentClass() {
-        return VideoFragmentFC.class;
-    }
-
-    @Override
-    protected void setupTabTitle(int i) {
-        TabWidget tabWidget = mTabHost.getTabWidget();
-        TextView textView = (TextView) tabWidget.getChildAt(i).findViewById(android.R.id.title);
-        if(textView.getLayoutParams() instanceof RelativeLayout.LayoutParams){
-
-            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) textView.getLayoutParams();
-            params.addRule(RelativeLayout.CENTER_HORIZONTAL);
-            params.addRule(RelativeLayout.CENTER_VERTICAL);
-            params.height = RelativeLayout.LayoutParams.MATCH_PARENT;
-            params.width  = RelativeLayout.LayoutParams.MATCH_PARENT;
-            params.alignWithParent = true;
-            params.setMargins(0,0,0,0);
-            textView.setGravity(Gravity.CENTER);
-            textView.setPadding(0,0,0,0);
-            textView.setLayoutParams(params);
-            textView.setBackgroundColor(Color.BLACK);
-
-        }else if(textView.getLayoutParams() instanceof LinearLayout.LayoutParams){
-            LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) textView.getLayoutParams();
-            params.gravity = Gravity.CENTER;
-            textView.setLayoutParams(params);
-        }
-//        textView.setTextColor(getResources().getColor(com.learnncode.mediachooser.R.color.tabs_title_color));
-        textView.setTextSize(convertDipToPixels(10));
-    }
-
-    @Override
-    protected void changeTabTitleUnselected(int tabNumber) {
-        //((TextView)(mTabHost.getTabWidget().getChildAt(tabNumber).findViewById(android.R.id.title))).setTextColor(Color.WHITE);
-    }
-
-    @Override
-    protected void changeTabTitleSelected(int tabNumber) {
-        //((TextView)(mTabHost.getTabWidget().getChildAt(tabNumber).findViewById(android.R.id.title))).setTextColor(getResources().getColor(com.learnncode.mediachooser.R.color.headerbar_selected_tab_color));
-    }
-
-
-    @Override
-    public void onVideoSelected(ArrayList<String> items){
-        if(items.size() > 0){
-            galleryVideo = new File(items.get(0));
-            showNext();
-        }else{
-            galleryVideo = null;
-            hideNext();
-        }
-    }
-    //endregion
-
-    void showNext() {
-        buttonNext.setVisibility(View.VISIBLE);
-    }
-
-    void hideNext() {
-        buttonNext.setVisibility(View.GONE);
-    }
 }
