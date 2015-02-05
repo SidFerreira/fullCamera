@@ -158,6 +158,7 @@ public class HomeFragmentActivity extends FragmentActivity implements ImageFragm
 
                 mTabHost.addTab(mTabHost.newTabSpec(TAB_IMAGE).setIndicator(getResources().getString(R.string.images_tab) + "      "), getImageFragmentClass(), null);
             }
+
         }
 
         for (int i = 0; i < mTabHost.getTabWidget().getChildCount(); i++) {

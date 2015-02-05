@@ -12,9 +12,7 @@
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_launcher"
-        android:label="@string/full_camera"
-        tools:replace="android:label" >
+        android:icon="@drawable/ic_launcher" >
         <activity
             android:name="br.com.ferreiraz.fullcamera.FullCameraActivity"
             android:label="@string/full_camera" >
