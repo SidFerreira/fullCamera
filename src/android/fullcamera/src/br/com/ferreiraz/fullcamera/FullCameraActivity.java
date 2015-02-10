@@ -18,6 +18,7 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.*;
 import android.support.annotation.NonNull;
+import android.util.LayoutDirection;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
@@ -75,7 +76,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private ImageFragmentFC             imageFragment;
 
     private File                        galleryVideo;
-    private FrameLayout                 mPreviewHolder;
+    private RelativeLayout              mPreviewHolder;
 
     private ProgressBarAnimation        progressAnimation;
     private ProgressBar                 progressBar;
@@ -161,7 +162,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         buttonFlashAuto     = (ImageButton) findViewById(R.id.flashAuto);
         buttonFlashOff      = (ImageButton) findViewById(R.id.flashOff);
 
-        mPreviewHolder = (FrameLayout) findViewById(R.id.cameraPreview);
+        mPreviewHolder = (RelativeLayout) findViewById(R.id.cameraPreview);
 
         progressBar         = (ProgressBar) findViewById(R.id.progressBar);
 
@@ -281,21 +282,18 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             ArrayList<ImageButton> items = new ArrayList<>();
             if(allowSourceGalleryPhoto || allowSourceGalleryVideo) {
                 setBackgroundOn(buttonSourceGallery, R.drawable.fullcamgallerystyle);
-                buttonSourceGallery.setId(R.id.source_gallery);
                 buttonSourceGallery.setTag(BUTTON_SOURCE_GALLERY);
                 items.add(buttonSourceGallery);
             }
 
             if(allowSourceCameraPhoto) {
                 setBackgroundOn(buttonSourcePhoto, R.drawable.fullcamphotostyle);
-                buttonSourcePhoto.setId(R.id.source_photo);
                 buttonSourcePhoto.setTag(BUTTON_SOURCE_PHOTO);
                 items.add(buttonSourcePhoto);
             }
 
             if(allowSourceCameraVideo) {
                 setBackgroundOn(buttonSourceVideo, R.drawable.fullcamvideostyle);
-                buttonSourceVideo.setId(R.id.source_video);
                 buttonSourceVideo.setTag(BUTTON_SOURCE_VIDEO);
                 items.add(buttonSourceVideo);
             }
@@ -455,6 +453,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     protected void onClickProxy(ImageButton v) {
         int id = v.getId();
+        String tag = (String) v.getTag();
 
         if(id == R.id.next)
             finishWithItems();
@@ -464,9 +463,9 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             switchCameras();
         else if(id == R.id.flashOn || id == R.id.flashOff || id == R.id.flashAuto)
             flashSwitch();
-        else if(id == R.id.source_photo)
+        else if(tag.equals(BUTTON_SOURCE_PHOTO))
             capturePicture();
-        else if(id == R.id.source_video)
+        else if(tag.equals(BUTTON_SOURCE_VIDEO))
             captureVideo();
         else if(id == R.id.cancel)
             dropVideosDialog();
@@ -558,19 +557,24 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     protected void finishWithItems() {
         ArrayList<String> items = new ArrayList<>();
         this.setResult(Activity.RESULT_OK, this.getIntent());
-        int source_id = mPagerSources.getSelectedView().getId();
+        String source_tag = (String) mPagerSources.getSelectedView().getTag();
 
-        if(source_id == R.id.source_gallery) {
-            this.getIntent().putExtra("source", "gallery");
-            for(ResultClass result : mPagerPhotosItems) {
-                items.add(result.getFile().getAbsolutePath());
+        if(source_tag.equals(BUTTON_SOURCE_GALLERY)) {
+            if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
+                this.getIntent().putExtra("source", "gallery_photo");
+                for(ResultClass result : mPagerPhotosItems) {
+                    items.add(result.getFile().getAbsolutePath());
+                }
+            } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
+                this.getIntent().putExtra("source", "gallery_video");
+                items.add(galleryVideo.getAbsolutePath());
             }
-        } else if(mPagerSources.getSelectedView().getId() == R.id.source_photo) {
+        } else if(source_tag.equals(BUTTON_SOURCE_PHOTO)) {
             this.getIntent().putExtra("source", "photo");
             for(ResultClass result : mPagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
-        } else if(mPagerSources.getSelectedView().getId() == R.id.source_video) {
+        } else if(source_tag.equals(BUTTON_SOURCE_VIDEO)) {
             this.getIntent().putExtra("source", "video");
             if(mVideosItems.size() > 1) {
                 processVideo();
@@ -644,10 +648,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     void showPreview() {
         mPreviewHolder.setVisibility(View.VISIBLE);
+        startCamera();
     }
 
     void hidePreview() {
         mPreviewHolder.setVisibility(View.GONE);
+        stopCamera();
     }
 
     public static int getMaxVideoDuration() {
@@ -1101,7 +1107,21 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 mCamera = getCameraInstance();
 
             mPreview = new CameraPreview(this, mCamera);
+            Log.d("Measures", mPreviewHolder.getWidth() + "x" + mPreviewHolder.getHeight());
+            Log.d("Measured", mPreviewHolder.getMeasuredWidth() + "x" + mPreviewHolder.getMeasuredHeight());
             mPreviewHolder.removeAllViews();
+//            mPreview.setMinimumHeight(mPreviewHolder.get);
+            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mPreview.getLayoutParams();
+            if(params == null)
+                params = new RelativeLayout.LayoutParams(mCamera.getParameters().getPreviewSize().width, mCamera.getParameters().getPreviewSize().height);
+            params.height = mCamera.getParameters().getPreviewSize().height;
+            params.width = mCamera.getParameters().getPreviewSize().width;
+            params.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            params.addRule(RelativeLayout.CENTER_VERTICAL);
+//            params.height = RelativeLayout.LayoutParams.MATCH_PARENT;
+//            params.width  = RelativeLayout.LayoutParams.MATCH_PARENT;
+            params.setMargins(0,0,0,0);
+            mPreview.setLayoutParams(params);
             mPreviewHolder.addView(mPreview);
             currentFlashMode = 1; //AUTO
             flashSet();

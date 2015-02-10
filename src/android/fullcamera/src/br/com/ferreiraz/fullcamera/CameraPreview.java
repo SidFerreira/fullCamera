@@ -2,6 +2,7 @@ package br.com.ferreiraz.fullcamera;
 
 import android.content.Context;
 import android.hardware.Camera;
+import android.hardware.Camera.Size;
 import android.util.Log;
 import android.view.*;
 
@@ -40,6 +41,39 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         // empty. Take care of releasing the Camera preview in your activity.
     }
 
+
+    private Camera.Size getOptimalPreviewSize(List<Camera.Size> sizes, int w, int h) {
+        final double ASPECT_TOLERANCE = 0.1;
+        double targetRatio=(double)h / w;
+
+        if (sizes == null) return null;
+
+        Camera.Size optimalSize = null;
+        double minDiff = Double.MAX_VALUE;
+
+        int targetHeight = h;
+
+        for (Camera.Size size : sizes) {
+            double ratio = (double) size.width / size.height;
+            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
+            if (Math.abs(size.height - targetHeight) < minDiff) {
+                optimalSize = size;
+                minDiff = Math.abs(size.height - targetHeight);
+            }
+        }
+
+        if (optimalSize == null) {
+            minDiff = Double.MAX_VALUE;
+            for (Camera.Size size : sizes) {
+                if (Math.abs(size.height - targetHeight) < minDiff) {
+                    optimalSize = size;
+                    minDiff = Math.abs(size.height - targetHeight);
+                }
+            }
+        }
+        return optimalSize;
+    }
+
     public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
         // If your preview can change or rotate, take care of those events here.
         // Make sure to stop the preview before resizing or reformatting it.
@@ -58,32 +92,6 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         }
 
         Camera.Parameters parameters = mCamera.getParameters();
-
-/*        Display display = ((WindowManager)getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
-
-        if(display.getRotation() == Surface.ROTATION_0)
-        {
-            parameters.setPreviewSize(h, w);
-            mCamera.setDisplayOrientation(90);
-        }
-
-        if(display.getRotation() == Surface.ROTATION_90)
-        {
-            parameters.setPreviewSize(w, h);
-        }
-
-        if(display.getRotation() == Surface.ROTATION_180)
-        {
-            parameters.setPreviewSize(h, w);
-        }
-
-        if(display.getRotation() == Surface.ROTATION_270)
-        {
-            parameters.setPreviewSize(w, h);
-            mCamera.setDisplayOrientation(180);
-        }
-
-        mCamera.setParameters(parameters);*/
 
         boolean isPortrait = false;
         final int rotation = ((WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
@@ -107,25 +115,19 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         }
 
         if (parameters.getSupportedPictureSizes() != null) {
-            List<Camera.Size> sizes = parameters.getSupportedPictureSizes();
-            Camera.Size largest = sizes.get(0);
-            for (Camera.Size size : sizes) {
-                if(size.width > w && size.height > h) {
-                    if (size.width >= largest.width && size.height >= largest.height) {
-                        largest = size;
-                    }
-                }
-            }
-            float relationHeight = (float) largest.height / h;
+            List<Size> sizes = parameters.getSupportedPictureSizes();
+            Size smaller = getOptimalPreviewSize(sizes, w, h);
+
+/*            float relationHeight = (float) largest.height / h;
             float relationWidth  = (float) largest.width  / w;
             float relation       = (relationHeight > relationWidth) ? relationHeight : relationWidth;
             int previewHeight = (int) Math.floor(largest.height / relation);
-            int previewWidth  = (int) Math.floor(largest.width  / relation);
+            int previewWidth  = (int) Math.floor(largest.width  / relation);*/
 
-            if(isPortrait)
-                parameters.setPreviewSize(previewHeight, previewWidth);
-            else
-                parameters.setPreviewSize(previewWidth, previewHeight);
+//            if(isPortrait)
+                parameters.setPreviewSize(smaller.width, smaller.height);
+//            else
+//                parameters.setPreviewSize(smaller.width, smaller.height);
         }
 
         // set preview size and make any resize, rotate or

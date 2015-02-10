@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-
-    <item name="source_gallery" type="id"/>
-    <item name="source_photo" type="id"/>
-    <item name="source_video" type="id"/>
-
     <string name="full_camera">Full Camera Dev</string>
     <string name="description_switch_camera">Switch Camera</string>
     <string name="description_switch_flash">Switch Flash</string>
