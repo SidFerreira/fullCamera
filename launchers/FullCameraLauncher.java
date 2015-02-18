@@ -20,6 +20,11 @@ import java.util.ArrayList;
 public class FullCameraLauncher extends CordovaPlugin  {
 
     public static final String GET_ACTION = "get";
+    public static final String GALLERY_PHOTO = "GalleryPhoto";
+    public static final String GALLERY_VIDEO = "GalleryVideo";
+    public static final String CAMERA_PHOTO  = "CameraPhoto";
+    public static final String CAMERA_VIDEO  = "CameraVideo";
+
     private CallbackContext callbackContext;
 
     @Override
@@ -48,6 +53,12 @@ public class FullCameraLauncher extends CordovaPlugin  {
             intent.putExtra("stringDeleteAllVideos", args.getString(12));
             intent.putExtra("stringProcessingVideos", args.getString(13));
             intent.putExtra("stringAppFolder", args.getString(14));
+
+            String sourcesAvailable = args.getString(15);
+            intent.putExtra("allowSourceGalleryPhoto", sourcesAvailable.contains(GALLERY_PHOTO));
+            intent.putExtra("allowSourceGalleryVideo", sourcesAvailable.contains(GALLERY_VIDEO));
+            intent.putExtra("allowSourceCameraPhoto",  sourcesAvailable.contains(CAMERA_PHOTO));
+            intent.putExtra("allowSourceCameraVideo",  sourcesAvailable.contains(CAMERA_VIDEO));
 
             this.cordova.startActivityForResult((CordovaPlugin) this, intent, 418);
 

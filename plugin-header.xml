@@ -2,7 +2,7 @@
 <plugin xmlns="http://apache.org/cordova/ns/plugins/1.0"
         xmlns:android="http://schemas.android.com/apk/res/android"
         xmlns:rim="http://www.blackberry.com/ns/widgets"
-        id="br.com.ferreiraz.fullCamera"
+        id="br.com.ferreiraz"
         version="0.0.1">
     <name>Full Camera Plugin</name>
     <description>Plugin that unites gallery picking, taking photos and capture videos</description>

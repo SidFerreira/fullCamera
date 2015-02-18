@@ -191,7 +191,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         imageBox                = savedInstanceState.getInt("imageBox", 1200);
         imageCompression        = savedInstanceState.getInt("imageCompression", 100);
 
-        allowSourceGalleryPhoto = savedInstanceState.getBoolean("shouldShowGalleryImage", true);
+        allowSourceGalleryPhoto = savedInstanceState.getBoolean("allowSourceGalleryPhoto", true);
         allowSourceGalleryVideo = savedInstanceState.getBoolean("allowSourceGalleryVideo", true);
         getIntent().putExtra("showImage", allowSourceGalleryPhoto);
         getIntent().putExtra("showVideo", allowSourceGalleryVideo);
@@ -424,29 +424,6 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         if(isRecording) {
             return false;
         }
-        /*if(mPagerSources.getSelectedView().getId() == R.id.source_gallery) {
-            if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
-                if(mPagerPhotosItems.size() > 0) {
-                    dropGalleryPhotosDialog();
-                    return false;
-                }
-            } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
-                if(galleryVideo != null) {
-                    dropGalleryVideoDialog();
-                    return false;
-                }
-            }
-        } else if(mPagerSources.getSelectedView().getId() == R.id.source_photo) {
-            if(mPagerPhotosItems.size() > 0) {
-                dropAllPhotosDialog();
-                return false;
-            }
-        } else if(mPagerSources.getSelectedView().getId() == R.id.source_video) {
-            if(mVideosItems.size() > 0) {
-                dropAllVideosDialog();
-                return false;
-            }
-        }*/
         return true;
     }
 
