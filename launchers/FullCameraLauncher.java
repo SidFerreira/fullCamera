@@ -96,10 +96,10 @@ public class FullCameraLauncher extends CordovaPlugin  {
 
                         objItem.put("data", Base64.encodeToString(buffer, Base64.DEFAULT));
                         objItems.put(objItem);
+                        objItems.put("source", "" + intent.getStringExtra("source"));
                     }
 
                     obj.put("items", objItems);
-                    obj.put("source", "" + intent.getStringExtra("source"));
 
                 } catch (JSONException e) {
                     Log.d("...", "JSONException!");
