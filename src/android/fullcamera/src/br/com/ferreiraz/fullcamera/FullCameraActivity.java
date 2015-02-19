@@ -547,12 +547,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 items.add(galleryVideo.getAbsolutePath());
             }
         } else if(source_tag.equals(BUTTON_SOURCE_PHOTO)) {
-            this.getIntent().putExtra("source", "photo");
+            this.getIntent().putExtra("source", "camera_photo");
             for(ResultClass result : mPagerPhotosItems) {
                 items.add(result.getFile().getAbsolutePath());
             }
         } else if(source_tag.equals(BUTTON_SOURCE_VIDEO)) {
-            this.getIntent().putExtra("source", "video");
+            this.getIntent().putExtra("source", "camera_video");
             if(mVideosItems.size() > 1) {
                 processVideo();
                 return;
