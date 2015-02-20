@@ -144,11 +144,11 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
         initPagerSources();
 
-        if(allowSourceCameraPhoto || allowSourceCameraVideo) {
+/*        if(allowSourceCameraPhoto || allowSourceCameraVideo) {
             startCamera();
         } else if(!allowSourceCameraPhoto && !allowSourceCameraVideo && !allowSourceGalleryPhoto && !allowSourceGalleryVideo) {
             finishWithoutItems();
-        }
+        }*/
 
     }
 
@@ -331,11 +331,13 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                                 dropAllPhotosDialog();
                                 isOk = false;
                             }
+                            startCamera();
                         } else if (previousViewTag.equals(BUTTON_SOURCE_VIDEO)) {
                             if (mVideosItems.size() > 0) {
                                 dropAllVideosDialog();
                                 isOk = false;
                             }
+                            startCamera();
                         }
                     }
 /*
@@ -517,6 +519,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 buttonFlashAuto.setVisibility( (currentFlashMode == 1) ? View.VISIBLE : View.GONE );
                 buttonFlashOff.setVisibility( (currentFlashMode == 2) ? View.VISIBLE : View.GONE );
             } catch (Exception e) {
+                e.printStackTrace();
                 flashSwitch();
             }
         }
@@ -1074,8 +1077,18 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     //Reference:
     // http://developer.android.com/guide/topics/media/camera.html#preview-layout
 
+    public void restartCamera() {
+        if(mCamera == null) {
+            startCamera();
+            Log.d("CAMERA", "Start Preview (NEW)");
+        } else {
+            Log.d("CAMERA", "Start Preview (Restart)");
+            mCamera.startPreview();
+        }
+    }
 
     public void startCamera() {
+        Log.d("CAMERA", "startCamera");
         int numberOfCameras = Camera.getNumberOfCameras();
         if(numberOfCameras > 0) {
             if(numberOfCameras > 1) {
@@ -1092,12 +1105,19 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mPreview.getLayoutParams();
             if(params == null)
                 params = new RelativeLayout.LayoutParams(mCamera.getParameters().getPreviewSize().width, mCamera.getParameters().getPreviewSize().height);
-            params.height = mCamera.getParameters().getPreviewSize().height;
-            params.width = mCamera.getParameters().getPreviewSize().width;
+            Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
+
+
+            final int rotation = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
+
+            if(rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+
+            } else {
+                params.height = previewSize.width;
+                params.width = previewSize.height;
+            }
             params.addRule(RelativeLayout.CENTER_HORIZONTAL);
             params.addRule(RelativeLayout.CENTER_VERTICAL);
-//            params.height = RelativeLayout.LayoutParams.MATCH_PARENT;
-//            params.width  = RelativeLayout.LayoutParams.MATCH_PARENT;
             params.setMargins(0,0,0,0);
             mPreview.setLayoutParams(params);
             mPreviewHolder.addView(mPreview);
@@ -1182,6 +1202,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             c = Camera.open(cameraId); // attempt to get a Camera instance
         }
         catch (Exception e){
+            e.printStackTrace();
             // Camera is not available (in use or does not exist)
         }
         return c; // returns null if camera is unavailable
@@ -1230,10 +1251,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             mMediaRecorder.prepare();
         } catch (IllegalStateException e) {
             Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
+            e.printStackTrace();
             releaseMediaRecorder();
             return false;
         } catch (IOException e) {
             Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
+            e.printStackTrace();
             releaseMediaRecorder();
             return false;
         }
@@ -1251,7 +1274,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 return;
             }
 
-            camera.startPreview();
+            restartCamera();
             final Handler handler = new Handler();
             Runnable runnable = new Runnable() {
                 @Override
