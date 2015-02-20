@@ -69,7 +69,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private PhotosAdapter               pagerPhotosAdapter;
 
     private ArrayList<ResultClass> mPagerPhotosItems;
-    private ArrayList<ResultFile> mVideosItems = new ArrayList<>();
+    private ArrayList<ResultFile> mVideosItems = new ArrayList<ResultFile>();
     private File                        tempVideoFile;
 
     private VideoFragmentFC             videoFragment;
@@ -122,11 +122,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        if(savedInstanceState == null)
-            savedInstanceState = new Bundle();
-
-        if(getIntent() == null) {
-            setIntent(new Intent());
+        if(savedInstanceState == null) {
+            if(getIntent().getExtras() == null) {
+                savedInstanceState = new Bundle();
+            } else {
+                savedInstanceState = getIntent().getExtras();
+            }
         }
 
         //TODO Fix rotation issues
@@ -240,7 +241,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private void initPagerPhotos() {
         mPagerPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
         if(mPagerPhotosItems == null) {
-            mPagerPhotosItems = new ArrayList<>();
+            mPagerPhotosItems = new ArrayList<ResultClass>();
             pagerPhotosAdapter = new PhotosAdapter(this, mPagerPhotosItems);
             mPagerPhotos.setAdapter(pagerPhotosAdapter);
             mPagerPhotos.setSpacing(10);
@@ -279,7 +280,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private void initPagerSources() {
         mPagerSources = (EcoGallery) findViewById(R.id.pagerSources);
         if(pagerSourcesAdapter == null) {
-            ArrayList<ImageButton> items = new ArrayList<>();
+            ArrayList<ImageButton> items = new ArrayList<ImageButton>();
             if(allowSourceGalleryPhoto || allowSourceGalleryVideo) {
                 setBackgroundOn(buttonSourceGallery, R.drawable.fullcamgallerystyle);
                 buttonSourceGallery.setTag(BUTTON_SOURCE_GALLERY);
@@ -532,7 +533,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     protected void finishWithItems() {
-        ArrayList<String> items = new ArrayList<>();
+        ArrayList<String> items = new ArrayList<String>();
         this.setResult(Activity.RESULT_OK, this.getIntent());
         String source_tag = (String) mPagerSources.getSelectedView().getTag();
 
@@ -681,8 +682,8 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             @Override
             public void run() {
 
-                List<Track> videoTracks = new LinkedList<>();
-                List<Track> audioTracks = new LinkedList<>();
+                List<Track> videoTracks = new LinkedList<Track>();
+                List<Track> audioTracks = new LinkedList<Track>();
 
                 Movie[] inMovies = new Movie[mVideosItems.size()];
                 for (int i = 0; i < mVideosItems.size(); i++) {

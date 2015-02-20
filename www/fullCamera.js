@@ -1,5 +1,3 @@
-if(!cordova) { var cordova = {}; }
-cordova.define("br.com.ferreiraz.fullCamera.fullCamera", function(require, exports, module) { 
     var exec = require('cordova/exec');
     //argscheck = require('cordova/argscheck'),
     var fullCameraExport = {};
@@ -51,14 +49,12 @@ cordova.define("br.com.ferreiraz.fullCamera.fullCamera", function(require, expor
 
         var _options = globalOptions;
 
-        for (var key = options.length - 1; key >= 0; key--) {
-            var value = options[key];
-            console.log(key, value);
-            if(value) { 
-                _options[key] = value;
+        fullCameraExport.setOptions = function(options) {
+            for (var key = options.length - 1; key >= 0; key--) {
+                var value = options[key];
+                globalOptions[key] = value;
             }
-        }
-        console.log(_options);
+        };
 
         exec(
             typeof onSuccess === 'function' ? onSuccess : function () {},
@@ -119,4 +115,3 @@ cordova.define("br.com.ferreiraz.fullCamera.fullCamera", function(require, expor
     */
 
     module.exports = fullCameraExport;
-});
