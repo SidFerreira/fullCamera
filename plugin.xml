@@ -43,6 +43,7 @@
         <framework src="src/android/ecogallery" custom="true" />
         <framework src="src/android/mediaChooserlib" custom="true" />
 
+        <hook type="before_build" src="scripts/fixProjectProperties.js" />
     </platform>
 
 </plugin>
