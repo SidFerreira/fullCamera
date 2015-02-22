@@ -40,6 +40,8 @@
         </config-file>
 
         <framework src="src/android/fullcamera" custom="true" />
+        <framework src="src/android/ecogallery" custom="true" />
+        <framework src="src/android/mediaChooserlib" custom="true" />
 
     </platform>
 
