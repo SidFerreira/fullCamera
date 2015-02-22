@@ -8,4 +8,9 @@ var propertiesFile = fs.readFileSync(propertiesPath, { encoding: 'utf8' });
 if(propertiesFile) {
 	propertiesFile = propertiesFile.replace(/{{projectName}}/g, projectName);
 	fs.writeFileSync(propertiesPath, propertiesFile, { encoding: 'utf8' });	
+} else {
+	console.log('Error fixing properties file.');
+	console.log('process.env.PWD may be undefined. Showing process.env:');
+	console.log(process.env);
+	process.exit();
 }
