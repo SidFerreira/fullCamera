@@ -144,12 +144,6 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
         initPagerSources();
 
-/*        if(allowSourceCameraPhoto || allowSourceCameraVideo) {
-            startCamera();
-        } else if(!allowSourceCameraPhoto && !allowSourceCameraVideo && !allowSourceGalleryPhoto && !allowSourceGalleryVideo) {
-            finishWithoutItems();
-        }*/
-
     }
 
     //region SETUP and Init
@@ -340,6 +334,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                             startCamera();
                         }
                     }
+
 /*
                     if(isRecording) {
                         mPagerSources.setSelection(mPagerPhotos.getOldPosition());
@@ -388,6 +383,16 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
                 }
             });
+
+            try {
+                if(allowSourceCameraPhoto) {
+                    mPagerSources.setSelection(items.indexOf(buttonSourcePhoto));
+                } else if (allowSourceCameraVideo) {
+                    mPagerSources.setSelection(items.indexOf(buttonSourceVideo));
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
     }
 
@@ -1107,15 +1112,15 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 params = new RelativeLayout.LayoutParams(mCamera.getParameters().getPreviewSize().width, mCamera.getParameters().getPreviewSize().height);
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
 
-
             final int rotation = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
 
-            if(rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
+            //Fix this code to respect screen size.
+/*            if(rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
 
             } else {
-                params.height = previewSize.width;
-                params.width = previewSize.height;
-            }
+//                params.height = previewSize.width;
+//                params.width = previewSize.height;
+            }*/
             params.addRule(RelativeLayout.CENTER_HORIZONTAL);
             params.addRule(RelativeLayout.CENTER_VERTICAL);
             params.setMargins(0,0,0,0);
