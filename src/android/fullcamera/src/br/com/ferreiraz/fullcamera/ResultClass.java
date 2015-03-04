@@ -7,6 +7,7 @@ import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
+import android.hardware.Camera;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.DisplayMetrics;
@@ -84,7 +85,7 @@ public class ResultClass implements Parcelable {
         scaled.writeToParcel(dest, flags);
     }
 
-    public static Bitmap rotatedBitmap(Bitmap bitmap, Context context) {
+    public static Bitmap rotatedBitmap(Bitmap bitmap, Context context, boolean mustMirror) {
         Matrix matrix = new Matrix();
         int rotate = 90;
         final int rotation = ((WindowManager) context.getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
@@ -95,6 +96,15 @@ public class ResultClass implements Parcelable {
             case Surface.ROTATION_270:
                 rotate = 180;
                 break;
+        }
+
+        if (mustMirror)
+        {
+            float[] mirrorY = { -1, 0, 0, 0, 1, 0, 0, 0, 1};
+            Matrix matrixMirrorY = new Matrix();
+            matrixMirrorY.setValues(mirrorY);
+
+            matrix.postConcat(matrixMirrorY);
         }
 
         matrix.postRotate(rotate);

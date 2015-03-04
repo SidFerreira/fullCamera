@@ -98,10 +98,10 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     //Parameters
 
 
-    private boolean allowSourceGalleryPhoto = true;
-    private boolean allowSourceGalleryVideo = true;
-    private boolean allowSourceCameraPhoto = true;
-    private boolean allowSourceCameraVideo = true;
+    private boolean                     allowSourceGalleryPhoto = true;
+    private boolean                     allowSourceGalleryVideo = true;
+    private boolean                     allowSourceCameraPhoto = true;
+    private boolean                     allowSourceCameraVideo = true;
     private boolean                     shouldSaveOnGallery     = true;
     private int                         imageBox                = 720;
     private int                         imageCompression        = 100;
@@ -588,7 +588,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     private Bitmap rotateBitmap(Bitmap bitmap) {
-        return ResultClass.rotatedBitmap(bitmap, self);
+        return ResultClass.rotatedBitmap(bitmap, self, Camera.CameraInfo.CAMERA_FACING_FRONT == cameraId);
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
