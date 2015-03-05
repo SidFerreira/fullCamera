@@ -55,10 +55,10 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 
         int targetHeight = h;
 
-        Log.d("TARGET", "" + w + "x" + h);
+//        Log.d("TARGET", "" + w + "x" + h);
 
         for (Camera.Size size : sizes) {
-            Log.d("SIZE", "" + size.width + "x" + size.height);
+//            Log.d("SIZE", "" + size.width + "x" + size.height);
             double ratio = (double) size.width / size.height;
             if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
             if (Math.abs(size.height - targetHeight) < minDiff) {
@@ -129,7 +129,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             float relation       = (relationHeight > relationWidth) ? relationHeight : relationWidth;
             int previewHeight = (int) Math.floor(largest.height / relation);
             int previewWidth  = (int) Math.floor(largest.width  / relation);*/
-Log.d("Choosen size:", smaller.width + "x" + smaller.height);
+//Log.d("Choosen size:", smaller.width + "x" + smaller.height);
 //            if(isPortrait)
                 parameters.setPreviewSize(smaller.height, smaller.width);
 //            else

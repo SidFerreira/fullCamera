@@ -302,69 +302,41 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             mPagerSources.setOnItemSelectedListener(new EcoGalleryAdapterView.OnItemSelectedListener() {
                 @Override
                 public void onItemSelected(EcoGalleryAdapterView<?> parent, View view, int position, long id) {
-                    boolean isOk = true;
+                    boolean maySwitchButtons = true;
                     int oldPosition = mPagerSources.getOldPosition();
-                    Log.d("onItemSelected", oldPosition + " -> " + position);
+//                    Log.d("onItemSelected", oldPosition + " -> " + position);
                     if (!mPagerSourcesRollingBack && oldPosition != EcoGalleryAdapterView.INVALID_POSITION) {
                         String previousViewTag = (String) mPagerSources.getChildAt(oldPosition).getTag();
-                        Log.d("onItemSelected", oldPosition + " -> " + position + " = " + previousViewTag);
+//                        Log.d("onItemSelected", oldPosition + " -> " + position + " = " + previousViewTag);
                         if (previousViewTag.equals(BUTTON_SOURCE_GALLERY)) {
                             if (mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
                                 if (mPagerPhotosItems.size() > 0) {
                                     dropGalleryPhotosDialog();
-                                    isOk = false;
+                                    maySwitchButtons = false;
                                 }
                             } else if (mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
                                 if (galleryVideo != null) {
                                     dropGalleryVideoDialog(oldPosition);
-                                    isOk = false;
+                                    maySwitchButtons = false;
                                 }
                             }
                         } else if (previousViewTag.equals(BUTTON_SOURCE_PHOTO)) {
                             if (mPagerPhotosItems.size() > 0) {
                                 dropAllPhotosDialog();
-                                isOk = false;
+                                maySwitchButtons = false;
                             }
-                            startCamera();
                         } else if (previousViewTag.equals(BUTTON_SOURCE_VIDEO)) {
                             if (mVideosItems.size() > 0) {
                                 dropAllVideosDialog();
-                                isOk = false;
-                            }
-                            startCamera();
-                        }
-                    }
-
-/*
-                    if(isRecording) {
-                        mPagerSources.setSelection(mPagerPhotos.getOldPosition());
-                        return;
-                    }
-
-                    if(mPagerPhotos.getOldPosition() != EcoGalleryAdapterView.INVALID_POSITION) {
-                        if(mPagerPhotos.getChildAt(mPagerPhotos.getOldPosition()).getTag() == BUTTON_SOURCE_GALLERY) {
-                            if(mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
-                                if(mPagerPhotosItems.size() > 0)
-                                    dropGalleryPhotosDialog();
-                            } else if(mTabHost.getCurrentTabTag().equals(TAB_VIDEO)) {
-                                if(galleryVideo != null)
-                                    dropGalleryVideoDialog();
+                                maySwitchButtons = false;
                             }
                         }
                     }
-
-                    if(mPagerPhotosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_PHOTO) {
-                        dropAllPhotosDialog();
-                    }
-                    if(mVideosItems.size() > 0 && view.getTag() != BUTTON_SOURCE_VIDEO) {
-                        dropAllVideosDialog();
-                    }
-*/
 
                     if (view == null)
                         return;
 
-                    if (isOk) {
+                    if (maySwitchButtons) {
                         switchSourceButtons(view.getTag());
 
                         if (view.getTag() == BUTTON_SOURCE_PHOTO || view.getTag() == BUTTON_SOURCE_VIDEO) {
@@ -476,11 +448,11 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     protected void switchCameras() {
+        stopCamera();
         cameraId++;
         if(cameraId >= Camera.getNumberOfCameras()) {
             cameraId = 0;
         }
-        stopCamera();
         startCamera();
     }
 
@@ -634,7 +606,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     void showPreview() {
         mPreviewHolder.setVisibility(View.VISIBLE);
-        startCamera();
+        restartCamera();
     }
 
     void hidePreview() {
@@ -734,7 +706,6 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                         mediaScanIntent.setData(contentUri);
                         self.sendBroadcast(mediaScanIntent);
                     }
-                    dropVideos(true);
                     mVideosItems.add(new ResultFile(ret));
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -743,6 +714,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 handler.post(new Runnable() {
                     @Override
                     public void run() {
+                        dropVideos(true);
                         progressDialog.dismiss();
                         finishWithItems();
                     }
@@ -1083,6 +1055,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     // http://developer.android.com/guide/topics/media/camera.html#preview-layout
 
     public void restartCamera() {
+        stopCamera();
         if(mCamera == null) {
             startCamera();
             Log.d("CAMERA", "Start Preview (NEW)");
@@ -1103,8 +1076,8 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 mCamera = getCameraInstance();
 
             mPreview = new CameraPreview(this, mCamera);
-            Log.d("Measures", mPreviewHolder.getWidth() + "x" + mPreviewHolder.getHeight());
-            Log.d("Measured", mPreviewHolder.getMeasuredWidth() + "x" + mPreviewHolder.getMeasuredHeight());
+//            Log.d("Measures", mPreviewHolder.getWidth() + "x" + mPreviewHolder.getHeight());
+//            Log.d("Measured", mPreviewHolder.getMeasuredWidth() + "x" + mPreviewHolder.getMeasuredHeight());
             mPreviewHolder.removeAllViews();
 //            mPreview.setMinimumHeight(mPreviewHolder.get);
             RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mPreview.getLayoutParams();
@@ -1233,7 +1206,8 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         // Step 3: Set a CamcorderProfile (requires API Level 8 or higher)
 //        mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
 //        mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-        mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_HIGH));
+        //TODO define quality
+        mMediaRecorder.setProfile(CamcorderProfile.get(CamcorderProfile.QUALITY_480P));
 
         // Step 4: Set output file
         tempVideoFile = getOutputMediaFile(MEDIA_TYPE_VIDEO);
