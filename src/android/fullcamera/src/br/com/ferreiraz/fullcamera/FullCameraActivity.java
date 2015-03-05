@@ -18,7 +18,6 @@ import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.*;
 import android.support.annotation.NonNull;
-import android.util.LayoutDirection;
 import android.util.Log;
 import android.view.*;
 import android.widget.*;
@@ -52,7 +51,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     @SuppressWarnings("deprecation")
     private Camera mCamera;
-    private SurfaceView mPreview;
+    private SurfaceView mCameraPreviewSurface;
     private MediaRecorder mMediaRecorder;
     private boolean isRecording = false;
     private boolean mPagerSourcesRollingBack = false;
@@ -65,7 +64,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private int                         currentFlashMode = -1;
     private EcoGallery mPagerSources;
     private SourcesAdapter              pagerSourcesAdapter;
-    private EcoGallery mPagerPhotos;
+    private EcoGallery mCarouselPhotos;
     private PhotosAdapter               pagerPhotosAdapter;
 
     private ArrayList<ResultClass> mPagerPhotosItems;
@@ -233,16 +232,16 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     private void initPagerPhotos() {
-        mPagerPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
+        mCarouselPhotos = (EcoGallery) findViewById(R.id.pagerPhotos);
         if(mPagerPhotosItems == null) {
             mPagerPhotosItems = new ArrayList<ResultClass>();
             pagerPhotosAdapter = new PhotosAdapter(this, mPagerPhotosItems);
-            mPagerPhotos.setAdapter(pagerPhotosAdapter);
-            mPagerPhotos.setSpacing(10);
-            mPagerPhotos.setOnItemClickListener(new EcoGalleryAdapterView.OnItemClickListener() {
+            mCarouselPhotos.setAdapter(pagerPhotosAdapter);
+            mCarouselPhotos.setSpacing(10);
+            mCarouselPhotos.setOnItemClickListener(new EcoGalleryAdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(EcoGalleryAdapterView<?> parent, View view, final int position, long id) {
-                    if (mPagerPhotos.getSelectedItemPosition() == position) {
+                    if (mCarouselPhotos.getSelectedItemPosition() == position) {
                         AlertDialog dialog = new AlertDialog.Builder(self).create();
                         dialog.setMessage(stringDeletePhoto);
                         dialog.setCancelable(false);
@@ -304,10 +303,10 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 public void onItemSelected(EcoGalleryAdapterView<?> parent, View view, int position, long id) {
                     boolean maySwitchButtons = true;
                     int oldPosition = mPagerSources.getOldPosition();
-//                    Log.d("onItemSelected", oldPosition + " -> " + position);
+//                    logMessage("onItemSelected" + oldPosition + " -> " + position);;
                     if (!mPagerSourcesRollingBack && oldPosition != EcoGalleryAdapterView.INVALID_POSITION) {
                         String previousViewTag = (String) mPagerSources.getChildAt(oldPosition).getTag();
-//                        Log.d("onItemSelected", oldPosition + " -> " + position + " = " + previousViewTag);
+//                        logMessage("onItemSelected" + oldPosition + " -> " + position + " = " + previousViewTag);;
                         if (previousViewTag.equals(BUTTON_SOURCE_GALLERY)) {
                             if (mTabHost.getCurrentTabTag().equals(TAB_IMAGE)) {
                                 if (mPagerPhotosItems.size() > 0) {
@@ -434,16 +433,19 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     protected void stopCamera() {
         if(mCamera != null) {
             mCamera.stopPreview();
-            mCamera.setPreviewCallback(null);
+//            mCamera.setPreviewCallback(null);
             mCamera.release();
             mCamera = null;
         }
-        if(mPreview != null) {
-            surfaceHolder = mPreview.getHolder();
+        if(mCameraPreviewSurface != null) {
+            if(mPreviewHolder != null) {
+                mPreviewHolder.removeView(mCameraPreviewSurface);
+            }
+            surfaceHolder = mCameraPreviewSurface.getHolder();
             if(surfaceHolder != null) {
                 surfaceHolder = null;
             }
-            mPreview = null;
+            mCameraPreviewSurface = null;
         }
     }
 
@@ -587,11 +589,11 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     void showPagerPhotos() {
-        mPagerPhotos.setVisibility(View.VISIBLE);
+        mCarouselPhotos.setVisibility(View.VISIBLE);
     }
 
     void hidePagerPhotos() {
-        mPagerPhotos.setVisibility(View.GONE);
+        mCarouselPhotos.setVisibility(View.GONE);
     }
 
     void showGallery() {
@@ -605,8 +607,10 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     void showPreview() {
-        mPreviewHolder.setVisibility(View.VISIBLE);
-        restartCamera();
+        if(mPreviewHolder.getVisibility() != View.VISIBLE) {
+            mPreviewHolder.setVisibility(View.VISIBLE);
+            restartPreview();
+        }
     }
 
     void hidePreview() {
@@ -699,7 +703,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                     FileChannel fc = new RandomAccessFile(ret.getAbsolutePath(), "rw").getChannel();
                     out.writeContainer(fc);
                     fc.close();
-                    Log.d("ProcessVideo RET", ret.getAbsolutePath() + " >>> "  + ret.length());
+                    logMessage("ProcessVideo RET" + ret.getAbsolutePath() + " >>> "  + ret.length());;
                     if(shouldSaveOnGallery) {
                         Intent mediaScanIntent = new Intent(Intent.ACTION_MEDIA_SCANNER_SCAN_FILE);
                         Uri contentUri = Uri.fromFile(ret);
@@ -777,7 +781,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         SourcesAdapter(Context context, List<ImageButton> items) {
             this.context = context;
             this.items = items;
-            Log.d("Context", this.context.getPackageName()); //Avoid "unused" message on IDE
+            logMessage("Context" + this.context.getPackageName());; //Avoid "unused" message on IDE
         }
 
         public int getCount() {
@@ -899,7 +903,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             }
             if(count == 0) {
                 hideNext();
-                mPagerPhotos.setVisibility(View.GONE);
+                mCarouselPhotos.setVisibility(View.GONE);
             }
         }
         pagerPhotosAdapter.notifyDataSetChanged();
@@ -1058,47 +1062,74 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         stopCamera();
         if(mCamera == null) {
             startCamera();
-            Log.d("CAMERA", "Start Preview (NEW)");
+            logMessage("Start Preview (NEW)");;
         } else {
-            Log.d("CAMERA", "Start Preview (Restart)");
+            logMessage("Start Preview (Restart)");;
             mCamera.startPreview();
         }
     }
 
+    public void restartPreview() {
+        try {
+            mCamera.startPreview();
+        } catch (Exception e) {
+            logMessage("Failed to start preview");
+            e.printStackTrace();
+            restartCamera();
+        }
+    }
+
     public void startCamera() {
-        Log.d("CAMERA", "startCamera");
+        Exception e = new Exception("Started Camera");
+        e.printStackTrace();
+        logMessage("startCamera");
         int numberOfCameras = Camera.getNumberOfCameras();
         if(numberOfCameras > 0) {
             if(numberOfCameras > 1) {
                 buttonSwitchCamera.setVisibility(View.VISIBLE);
             }
-            if(mCamera == null)
+            if(mCamera == null) {
                 mCamera = getCameraInstance();
+                mCamera.setErrorCallback(new Camera.ErrorCallback() {
+                    @Override
+                    public void onError(int error, Camera camera) {
+                        logMessage("onError");
+                    }
+                });
+                mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+                    @Override
+                    public void onPreviewFrame(byte[] data, Camera camera) {
+                        logMessage("onPreviewFrame");
+                    }
+                });
+            }
 
-            mPreview = new CameraPreview(this, mCamera);
-//            Log.d("Measures", mPreviewHolder.getWidth() + "x" + mPreviewHolder.getHeight());
-//            Log.d("Measured", mPreviewHolder.getMeasuredWidth() + "x" + mPreviewHolder.getMeasuredHeight());
-            mPreviewHolder.removeAllViews();
-//            mPreview.setMinimumHeight(mPreviewHolder.get);
-            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mPreview.getLayoutParams();
+            mCameraPreviewSurface = new CameraPreview(this, mCamera);
+//            logMessage("Measures" + mPreviewHolder.getWidth() + "x" + mPreviewHolder.getHeight());;
+//            logMessage("Measured" + mPreviewHolder.getMeasuredWidth() + "x" + mPreviewHolder.getMeasuredHeight());;
+//            mPreviewHolder.removeAllViews();
+//            mCameraPreviewSurface.setMinimumHeight(mPreviewHolder.get);
+            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mCameraPreviewSurface.getLayoutParams();
             if(params == null)
                 params = new RelativeLayout.LayoutParams(mCamera.getParameters().getPreviewSize().width, mCamera.getParameters().getPreviewSize().height);
             Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
 
             final int rotation = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
 
+//            params.height = previewSize.width;
+//            params.width = previewSize.height;
             //Fix this code to respect screen size.
 /*            if(rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
 
             } else {
-//                params.height = previewSize.width;
-//                params.width = previewSize.height;
+                params.height = previewSize.width;
+                params.width = previewSize.height;
             }*/
             params.addRule(RelativeLayout.CENTER_HORIZONTAL);
             params.addRule(RelativeLayout.CENTER_VERTICAL);
-            params.setMargins(0,0,0,0);
-            mPreview.setLayoutParams(params);
-            mPreviewHolder.addView(mPreview);
+            params.setMargins(0, 0, 0, 0);
+            mCameraPreviewSurface.setLayoutParams(params);
+            mPreviewHolder.addView(mCameraPreviewSurface, 0);
             currentFlashMode = 1; //AUTO
             flashSet();
         }
@@ -1149,7 +1180,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         // Create the storage directory if it does not exist
         if (! mediaStorageDir.exists()){
             if (! mediaStorageDir.mkdirs()){
-                Log.d("MyCameraApp", "failed to create directory");
+                logMessage("MyCameraApp" + "failed to create directory");;
                 return null;
             }
         }
@@ -1176,7 +1207,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     public static Camera getCameraInstance(){
         Camera c = null;
         try {
-            Log.d("Camera", "Camera to open: " + cameraId);
+            logMessage("Camera to open: " + cameraId);;
             c = Camera.open(cameraId); // attempt to get a Camera instance
         }
         catch (Exception e){
@@ -1214,7 +1245,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         mMediaRecorder.setOutputFile(tempVideoFile.toString());
 
         // Step 5: Set the preview output
-        mMediaRecorder.setPreviewDisplay(mPreview.getHolder().getSurface());
+        mMediaRecorder.setPreviewDisplay(mCameraPreviewSurface.getHolder().getSurface());
         mMediaRecorder.setMaxDuration(maxVideoDuration * 1000);
         mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
             @Override
@@ -1229,12 +1260,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         try {
             mMediaRecorder.prepare();
         } catch (IllegalStateException e) {
-            Log.d(TAG, "IllegalStateException preparing MediaRecorder: " + e.getMessage());
+            logMessage(TAG + "IllegalStateException preparing MediaRecorder: " + e.getMessage());;
             e.printStackTrace();
             releaseMediaRecorder();
             return false;
         } catch (IOException e) {
-            Log.d(TAG, "IOException preparing MediaRecorder: " + e.getMessage());
+            logMessage(TAG + "IOException preparing MediaRecorder: " + e.getMessage());;
             e.printStackTrace();
             releaseMediaRecorder();
             return false;
@@ -1242,18 +1273,18 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         return true;
     }
 
-    private Camera.PictureCallback mPicture = new Camera.PictureCallback() {
+    private Camera.PictureCallback mPictureCallback = new Camera.PictureCallback() {
 
         @Override
         public void onPictureTaken(final byte[] data, Camera camera) {
 
             final File pictureFile = getOutputMediaFile(MEDIA_TYPE_IMAGE);
             if (pictureFile == null){
-                Log.d(TAG, "Error creating media file...");
+                logMessage(TAG + "Error creating media file...");;
                 return;
             }
 
-            restartCamera();
+            restartPreview();
             final Handler handler = new Handler();
             Runnable runnable = new Runnable() {
                 @Override
@@ -1267,6 +1298,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                         handler.post(new Runnable() {
                             @Override
                             public void run() {
+                                mCarouselPhotos.setVisibility(View.VISIBLE);
                                 pagerPhotosAdapterChanged();
                             }
                         });
@@ -1294,11 +1326,11 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                             mediaScanIntent.setData(contentUri);
                             self.sendBroadcast(mediaScanIntent);
                         }
-                        Log.d(TAG, "Photo Done");
+                        logMessage(TAG + "Photo Done");;
                     } catch (FileNotFoundException e) {
-                        Log.d(TAG, "File not found: " + e.getMessage());
+                        logMessage(TAG + "File not found: " + e.getMessage());;
                     } catch (IOException e) {
-                        Log.d(TAG, "Error accessing file: " + e.getMessage());
+                        logMessage(TAG + "Error accessing file: " + e.getMessage());;
                     }
                 }
             };
@@ -1309,8 +1341,8 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     protected void pagerPhotosAdapterChanged() {
         pagerPhotosAdapter.notifyDataSetChanged();
-        mPagerPhotos.setSelection(mPagerPhotosItems.size() / 2, true);
-        mPagerPhotos.setVisibility(View.VISIBLE);
+        mCarouselPhotos.setSelection(mPagerPhotosItems.size() / 2, true);
+        mCarouselPhotos.setVisibility(View.VISIBLE);
         if(mPagerPhotosItems.size() > 0)
             showNext();
         else
@@ -1321,24 +1353,27 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     public void capturePicture() {
         // get an image from the camera
         if(maxPhotoCount > 0 && mPagerPhotosItems.size() == maxPhotoCount) {
-            AlertDialog dialog = new AlertDialog.Builder(self).create();
-            dialog.setMessage(stringMaxPhotos.replace("X", "" + maxPhotoCount));
-            dialog.setCancelable(false);
-            dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
-                public void onClick(DialogInterface dialog, int buttonId) {
-                    dialog.dismiss();
-                }
-            });
-            dialog.setIcon(android.R.drawable.ic_dialog_alert);
-            dialog.show();
+            triedToExceedPictureLimit();
         } else {
             if(mCamera != null) {
-                mCamera.takePicture(null, null, mPicture);
+                mCamera.takePicture(null, null, mPictureCallback);
             } else {
-                stopCamera();
-                startCamera();
+                restartCamera();
             }
         }
+    }
+
+    public void triedToExceedPictureLimit() {
+        AlertDialog dialog = new AlertDialog.Builder(self).create();
+        dialog.setMessage(stringMaxPhotos.replace("X", "" + maxPhotoCount));
+        dialog.setCancelable(false);
+        dialog.setButton(DialogInterface.BUTTON_NEGATIVE, stringCancel, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int buttonId) {
+                dialog.dismiss();
+            }
+        });
+        dialog.setIcon(android.R.drawable.ic_dialog_alert);
+        dialog.show();
     }
 
     public void captureVideo() {
@@ -1347,7 +1382,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
             try {
                 mMediaRecorder.stop();  // stop the recording
             } catch (Exception e) {
-                Log.d("CaptureVideo", e.getMessage());
+                logMessage("CaptureVideo" + e.getMessage());;
             }
             releaseMediaRecorder(); // release the MediaRecorder object
             mCamera.lock();         // take camera access back from MediaRecorder
@@ -1405,7 +1440,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
             mVideosItems.add(new ResultFile(file));
             tempVideoFile = null;
-            mPagerPhotos.setVisibility(View.GONE);
+            mCarouselPhotos.setVisibility(View.GONE);
             if(mVideosItems.size() > 0) {
                 buttonCancel.setVisibility(View.VISIBLE);
                 showNext();
@@ -1421,5 +1456,9 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     //endregion
+
+    static void logMessage(String message) {
+        Log.d("FZFullCamera", message);
+    }
 
 }
