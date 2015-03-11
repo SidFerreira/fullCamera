@@ -156,7 +156,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         buttonFlashAuto     = (ImageButton) findViewById(R.id.flashAuto);
         buttonFlashOff      = (ImageButton) findViewById(R.id.flashOff);
 
-        mPreviewHolder = (RelativeLayout) findViewById(R.id.cameraPreview);
+        mPreviewHolder = (RelativeLayout) findViewById(R.id.cameraPreviewHolder);
 
         progressBar         = (ProgressBar) findViewById(R.id.progressBar);
 
@@ -431,12 +431,6 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     //region Camera Switches
 
     protected void stopCamera() {
-        if(mCamera != null) {
-            mCamera.stopPreview();
-//            mCamera.setPreviewCallback(null);
-            mCamera.release();
-            mCamera = null;
-        }
         if(mCameraPreviewSurface != null) {
             if(mPreviewHolder != null) {
                 mPreviewHolder.removeView(mCameraPreviewSurface);
@@ -446,6 +440,12 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 surfaceHolder = null;
             }
             mCameraPreviewSurface = null;
+        }
+        if(mCamera != null) {
+            mCamera.stopPreview();
+//            mCamera.setPreviewCallback(null);
+            mCamera.release();
+            mCamera = null;
         }
     }
 
@@ -1073,15 +1073,13 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
         try {
             mCamera.startPreview();
         } catch (Exception e) {
-            logMessage("Failed to start preview");
-            e.printStackTrace();
+            logMessage("Failed to restart preview");
+//            e.printStackTrace();
             restartCamera();
         }
     }
 
     public void startCamera() {
-        Exception e = new Exception("Started Camera");
-        e.printStackTrace();
         logMessage("startCamera");
         int numberOfCameras = Camera.getNumberOfCameras();
         if(numberOfCameras > 0) {
@@ -1103,32 +1101,16 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                     }
                 });
             }
+//
+            mCameraPreviewSurface = new CameraPreview(this, mCamera, mPreviewHolder.getHeight(), mPreviewHolder.getHeight()); //0, 0); //
+            RelativeLayout.LayoutParams layoutParamsForPreviewSurface = (RelativeLayout.LayoutParams) mCameraPreviewSurface.getLayoutParams();
+            if(layoutParamsForPreviewSurface == null)
+                layoutParamsForPreviewSurface = new RelativeLayout.LayoutParams(mCamera.getParameters().getPreviewSize().width, mCamera.getParameters().getPreviewSize().height);
 
-            mCameraPreviewSurface = new CameraPreview(this, mCamera);
-//            logMessage("Measures" + mPreviewHolder.getWidth() + "x" + mPreviewHolder.getHeight());;
-//            logMessage("Measured" + mPreviewHolder.getMeasuredWidth() + "x" + mPreviewHolder.getMeasuredHeight());;
-//            mPreviewHolder.removeAllViews();
-//            mCameraPreviewSurface.setMinimumHeight(mPreviewHolder.get);
-            RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) mCameraPreviewSurface.getLayoutParams();
-            if(params == null)
-                params = new RelativeLayout.LayoutParams(mCamera.getParameters().getPreviewSize().width, mCamera.getParameters().getPreviewSize().height);
-            Camera.Size previewSize = mCamera.getParameters().getPreviewSize();
-
-            final int rotation = ((WindowManager) getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
-
-//            params.height = previewSize.width;
-//            params.width = previewSize.height;
-            //Fix this code to respect screen size.
-/*            if(rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270) {
-
-            } else {
-                params.height = previewSize.width;
-                params.width = previewSize.height;
-            }*/
-            params.addRule(RelativeLayout.CENTER_HORIZONTAL);
-            params.addRule(RelativeLayout.CENTER_VERTICAL);
-            params.setMargins(0, 0, 0, 0);
-            mCameraPreviewSurface.setLayoutParams(params);
+            layoutParamsForPreviewSurface.addRule(RelativeLayout.CENTER_HORIZONTAL);
+            layoutParamsForPreviewSurface.addRule(RelativeLayout.CENTER_VERTICAL);
+            layoutParamsForPreviewSurface.setMargins(0, 0, 0, 0);
+            mCameraPreviewSurface.setLayoutParams(layoutParamsForPreviewSurface);
             mPreviewHolder.addView(mCameraPreviewSurface, 0);
             currentFlashMode = 1; //AUTO
             flashSet();

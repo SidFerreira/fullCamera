@@ -15,17 +15,20 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     private Camera mCamera;
     private static final String TAG = "FULL_CAM_PREVIEW";
 
-    public CameraPreview(Context context, Camera camera) {
+    public CameraPreview(Context context, Camera camera, int width, int height) {
         super(context);
         mCamera = camera;
 
         // Install a SurfaceHolder.Callback so we get notified when the
         // underlying surface is created and destroyed.
         mHolder = getHolder();
+        if(width > 0 && height > 0) {
+//            mHolder.setFixedSize(width, height);
+        }
 
         mHolder.addCallback(this);
         // deprecated setting, but required on Android versions prior to 3.0
-//        mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+        mHolder.setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
     }
 
     public void surfaceCreated(SurfaceHolder holder) {
@@ -42,6 +45,11 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
     public void surfaceDestroyed(SurfaceHolder holder) {
         // empty. Take care of releasing the Camera preview in your activity.
         Log.d(TAG, "surfaceDestroyed");
+        try {
+            mCamera.startPreview();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 
@@ -59,8 +67,8 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
 //        Log.d("TARGET", "" + w + "x" + h);
 
         for (Camera.Size size : sizes) {
-//            Log.d("SIZE", "" + size.width + "x" + size.height);
             double ratio = (double) size.width / size.height;
+            Log.d(TAG, "Size: " + size.width + "x" + size.height + " Ratio: " + ratio + "/" + targetRatio);
             if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
             if (Math.abs(size.height - targetHeight) < minDiff) {
                 optimalSize = size;
@@ -80,10 +88,10 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         return optimalSize;
     }
 
-    public void surfaceChanged(SurfaceHolder holder, int format, int w, int h) {
+    public void surfaceChanged(SurfaceHolder holder, int pixelFormat, int holderWidth, int holderHeight) {
         // If your preview can change or rotate, take care of those events here.
         // Make sure to stop the preview before resizing or reformatting it.
-
+        Log.d(TAG, "surfaceChanged " + holderWidth + "x" + holderHeight);
         if (mHolder.getSurface() == null){
             // preview surface does not exist
             return;
@@ -98,43 +106,43 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
             e.printStackTrace();
         }
 
-        Camera.Parameters parameters = mCamera.getParameters();
+        Camera.Parameters cameraParameters = mCamera.getParameters();
 
         boolean isPortrait = false;
         final int rotation = ((WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay().getRotation();
         switch (rotation) {
             case Surface.ROTATION_90:
                 mCamera.setDisplayOrientation(0);
-                parameters.setRotation(0);
+                cameraParameters.setRotation(0);
                 break;
             case Surface.ROTATION_270:
                 mCamera.setDisplayOrientation(180);
-                parameters.setRotation(180);
+                cameraParameters.setRotation(180);
                 break;
             default:
                 isPortrait = true;
                 mCamera.setDisplayOrientation(90);
-                parameters.setRotation(90);
-                int t = w;
-                w = h;
-                h = t;
+                cameraParameters.setRotation(90);
+/*                int t = holderWidth;
+                holderWidth = holderHeight;
+                holderHeight = t;*/
                 break;
         }
 
-        if (parameters.getSupportedPictureSizes() != null) {
-            List<Size> sizes = parameters.getSupportedPictureSizes();
-            Size smaller = getOptimalPreviewSize(sizes, w, h);
+        if (cameraParameters.getSupportedPictureSizes() != null) {
+            List<Size> sizes = cameraParameters.getSupportedPictureSizes();
+            Size smaller = getOptimalPreviewSize(sizes, holderWidth, holderHeight);
 
-/*            float relationHeight = (float) largest.height / h;
+/*            float relationHeight = (float) largest.height / holderHeight;
             float relationWidth  = (float) largest.width  / w;
             float relation       = (relationHeight > relationWidth) ? relationHeight : relationWidth;
             int previewHeight = (int) Math.floor(largest.height / relation);
             int previewWidth  = (int) Math.floor(largest.width  / relation);*/
-//Log.d("Choosen size:", smaller.width + "x" + smaller.height);
+            Log.d(TAG, "Choosen size:" + smaller.width + "x" + smaller.height);
 //            if(isPortrait)
-                parameters.setPreviewSize(smaller.height, smaller.width);
+//                cameraParameters.setPreviewSize(smaller.height, smaller.width);
 //            else
-//                parameters.setPreviewSize(smaller.width, smaller.height);
+//                cameraParameters.setPreviewSize(smaller.width, smaller.height);
         }
 
         // set preview size and make any resize, rotate or
@@ -143,6 +151,7 @@ public class CameraPreview extends SurfaceView implements SurfaceHolder.Callback
         // start preview with new settings
         try {
             mCamera.setPreviewDisplay(mHolder);
+//            mCamera.setParameters(cameraParameters);
             mCamera.startPreview();
 
         } catch (Exception e){
