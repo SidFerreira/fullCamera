@@ -518,6 +518,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     }
 
     protected void finishWithItems() {
+        stopCamera();
         ArrayList<String> items = new ArrayList<String>();
         this.setResult(Activity.RESULT_OK, this.getIntent());
         String source_tag = (String) mPagerSources.getSelectedView().getTag();
@@ -552,6 +553,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
 
     protected void finishWithoutItems() {
+        stopCamera();
         this.setResult(Activity.RESULT_CANCELED, this.getIntent());
         this.finish();
     }
@@ -1109,7 +1111,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 });
             }
 //
-            mCameraPreviewSurface = new CameraPreview(this, mCamera, mPreviewHolder.getHeight(), mPreviewHolder.getHeight()); //0, 0); //
+            mCameraPreviewSurface = new CameraPreview(this, mCamera, 0, 0); //mPreviewHolder.getHeight(), mPreviewHolder.getHeight()); //
             RelativeLayout.LayoutParams layoutParamsForPreviewSurface = (RelativeLayout.LayoutParams) mCameraPreviewSurface.getLayoutParams();
             if(layoutParamsForPreviewSurface == null)
                 layoutParamsForPreviewSurface = new RelativeLayout.LayoutParams(mCamera.getParameters().getPreviewSize().width, mCamera.getParameters().getPreviewSize().height);
@@ -1143,6 +1145,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
     private void releaseCamera(){
         if (mCamera != null){
             mCamera.stopPreview();
+            mCamera.setPreviewCallback(null);
             mCamera.release();        // release the camera for other applications
             mCamera = null;
         }
