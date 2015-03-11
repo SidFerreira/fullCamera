@@ -1071,10 +1071,14 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
 
     public void restartPreview() {
         try {
-            mCamera.startPreview();
+            if(mCamera != null) {
+                mCamera.startPreview();
+            } else {
+                startCamera();
+            }
         } catch (Exception e) {
             logMessage("Failed to restart preview");
-//            e.printStackTrace();
+            e.printStackTrace();
             restartCamera();
         }
     }
@@ -1097,7 +1101,7 @@ public class FullCameraActivity extends HomeFragmentActivity implements EcoGalle
                 mCamera.setPreviewCallback(new Camera.PreviewCallback() {
                     @Override
                     public void onPreviewFrame(byte[] data, Camera camera) {
-                        logMessage("onPreviewFrame");
+                        //logMessage("onPreviewFrame");
                     }
                 });
             }

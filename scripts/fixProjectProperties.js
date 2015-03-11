@@ -8,7 +8,8 @@ var projectName = config.match(/id="([^"]+)"/g).pop().split(".").pop().split('"'
 var propertiesPath = process.env.PWD + '/platforms/android/br.com.ferreiraz.fullCamera/' + projectName + '-fullcamera/project.properties';
 var propertiesFile = fs.readFileSync(propertiesPath, { encoding: 'utf8' });
 console.log('process.env.PWD: ' + process.env.PWD);
-console.log('propertiesFile: ' + propertiesPath);
+console.log('propertiesPath: ' + propertiesPath);
+console.log('propertiesFile: ' + propertiesFile);
 if(propertiesFile) {
 	propertiesFile = propertiesFile.replace(/{{projectName}}/g, projectName);
 	fs.writeFileSync(propertiesPath, propertiesFile, { encoding: 'utf8' });	
